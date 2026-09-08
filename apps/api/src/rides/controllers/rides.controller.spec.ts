@@ -1,4 +1,5 @@
 import { PaymentMethod, VehicleType } from '@yatra-seva/shared-types';
+import { PrismaService } from '../../database/prisma.service';
 import { FareService } from '../../fare/fare.service';
 import { MockMapService, MockRoutingService } from '../../providers/mock/mock-map.service';
 import { RidesController } from './rides.controller';
@@ -6,13 +7,25 @@ import { RidesService } from '../services/rides.service';
 
 describe('RidesController', () => {
   let controller: RidesController;
-  let service: RidesService;
+  let mockPrisma: any;
 
   beforeEach(() => {
+    mockPrisma = {
+      ride: {
+        create: jest.fn(),
+        findMany: jest.fn().mockResolvedValue([]),
+        findUnique: jest.fn(),
+      },
+    };
     const fareService = new FareService();
     const mockMapService = new MockMapService();
     const mockRoutingService = new MockRoutingService();
-    service = new RidesService(fareService, mockMapService, mockRoutingService);
+    const service = new RidesService(
+      mockPrisma as unknown as PrismaService,
+      fareService,
+      mockMapService,
+      mockRoutingService,
+    );
     controller = new RidesController(service);
   });
 

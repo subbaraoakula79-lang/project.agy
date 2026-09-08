@@ -4,6 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { Address, FareEstimate, RideStatus, UserRole, VehicleType } from '@yatra-seva/shared-types';
+import { PrismaService } from '../../database/prisma.service';
 import { FareService } from '../../fare/fare.service';
 import { MockMapService, MockRoutingService } from '../../providers/mock/mock-map.service';
 import { CreateRideDto } from '../dto/create-ride.dto';
@@ -34,9 +35,8 @@ export interface RideRecord {
 
 @Injectable()
 export class RidesService {
-  private readonly ridesMap: Map<string, RideRecord> = new Map();
-
   constructor(
+    private readonly prisma: PrismaService,
     private readonly fareService: FareService,
     private readonly mockMapService: MockMapService,
     private readonly mockRoutingService: MockRoutingService,
@@ -55,13 +55,13 @@ export class RidesService {
     const route = await this.mockRoutingService.getRoute(origin, destination);
 
     return this.fareService.calculateAllFares({
-      cityId: 'kakinada-city-id',
+      cityId: 'd75253d1-4456-42c6-8483-e726bd20d156', // Kakinada city ID
       distanceMeters: route.distanceMeters,
       durationSeconds: route.durationSeconds,
     });
   }
 
-  /** Create a new ride request. Initial status is strictly REQUESTED. */
+  /** Create a new ride request via Prisma/PostgreSQL only. Initial status is strictly REQUESTED. */
   async createRide(riderId: string, userRole: UserRole, dto: CreateRideDto): Promise<RideRecord> {
     if (userRole !== UserRole.RIDER) {
       throw new ForbiddenException('Only riders can request rides');
@@ -72,61 +72,67 @@ export class RidesService {
 
     const route = await this.mockRoutingService.getRoute(origin, destination);
     const fareEstimate = await this.fareService.calculateFare({
-      cityId: 'kakinada-city-id',
+      cityId: 'd75253d1-4456-42c6-8483-e726bd20d156',
       vehicleType: dto.vehicleType,
       distanceMeters: route.distanceMeters,
       durationSeconds: route.durationSeconds,
     });
 
-    const now = new Date().toISOString();
-    const rideId = `ride-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+    // Create ride directly in PostgreSQL via Prisma Client
+    const created = await this.prisma.ride.create({
+      data: {
+        riderId,
+        driverProfileId: null, // No driver assigned in Phase 3
+        vehicleTypeId: dto.vehicleType,
+        cityId: 'd75253d1-4456-42c6-8483-e726bd20d156',
+        status: RideStatus.REQUESTED, // Strictly REQUESTED
+        paymentMethod: dto.paymentMethod,
+        estimatedFare: fareEstimate.totalFare,
+        estimatedDistanceMeters: route.distanceMeters,
+        estimatedDurationSeconds: route.durationSeconds,
+        location: {
+          create: {
+            pickupLatitude: dto.pickupLatitude,
+            pickupLongitude: dto.pickupLongitude,
+            pickupAddress: dto.pickupAddress,
+            dropLatitude: dto.dropLatitude,
+            dropLongitude: dto.dropLongitude,
+            dropAddress: dto.dropAddress,
+          },
+        },
+      },
+      include: {
+        location: true,
+      },
+    });
 
-    const ride: RideRecord = {
-      id: rideId,
-      riderId,
-      driverProfileId: null, // No driver assigned in Phase 3
-      vehicleTypeId: dto.vehicleType,
-      vehicleType: dto.vehicleType,
-      cityId: 'kakinada-city-id',
-      status: RideStatus.REQUESTED, // Strictly REQUESTED
-      paymentMethod: dto.paymentMethod,
-      estimatedFare: fareEstimate.totalFare,
-      estimatedDistanceMeters: route.distanceMeters,
-      estimatedDurationSeconds: route.durationSeconds,
-      pickupLatitude: dto.pickupLatitude,
-      pickupLongitude: dto.pickupLongitude,
-      pickupAddress: dto.pickupAddress,
-      dropLatitude: dto.dropLatitude,
-      dropLongitude: dto.dropLongitude,
-      dropAddress: dto.dropAddress,
-      requestedAt: now,
-      createdAt: now,
-      updatedAt: now,
-    };
+    console.log(`🚗 [RidesService] Ride created in PostgreSQL: ${created.id} (status: ${created.status})`);
 
-    this.ridesMap.set(ride.id, ride);
-    console.log(`🚗 [RidesService] Ride requested: ${ride.id} (${ride.vehicleType}, ₹${ride.estimatedFare})`);
-    return ride;
+    return this.mapPrismaRideToRecord(created);
   }
 
-  /** Get all rides requested by the authenticated rider (enforces ownership). */
+  /** Get all rides requested by the authenticated rider directly from PostgreSQL. */
   async getRiderRides(riderId: string, userRole: UserRole): Promise<RideRecord[]> {
     if (userRole !== UserRole.RIDER) {
       throw new ForbiddenException('Only riders can list their rides');
     }
 
-    const rides: RideRecord[] = [];
-    for (const ride of this.ridesMap.values()) {
-      if (ride.riderId === riderId) {
-        rides.push(ride);
-      }
-    }
-    return rides.sort((a, b) => (a.createdAt > b.createdAt ? -1 : 1));
+    const rides = await this.prisma.ride.findMany({
+      where: { riderId },
+      include: { location: true },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    return rides.map((r) => this.mapPrismaRideToRecord(r));
   }
 
-  /** Get a specific ride by ID (enforces ownership). */
+  /** Get a specific ride by ID from PostgreSQL (enforces ownership). */
   async getRideById(rideId: string, requestingUserId: string, userRole: UserRole): Promise<RideRecord> {
-    const ride = this.ridesMap.get(rideId);
+    const ride = await this.prisma.ride.findUnique({
+      where: { id: rideId },
+      include: { location: true },
+    });
+
     if (!ride) {
       throw new NotFoundException(`Ride not found with ID: ${rideId}`);
     }
@@ -136,6 +142,32 @@ export class RidesService {
       throw new ForbiddenException('Access denied: You can only access your own ride requests');
     }
 
-    return ride;
+    return this.mapPrismaRideToRecord(ride);
+  }
+
+  /** Helper to map Prisma Ride object to RideRecord contract. */
+  private mapPrismaRideToRecord(ride: any): RideRecord {
+    return {
+      id: ride.id,
+      riderId: ride.riderId,
+      driverProfileId: ride.driverProfileId,
+      vehicleTypeId: ride.vehicleTypeId,
+      vehicleType: ride.vehicleTypeId as VehicleType,
+      cityId: ride.cityId,
+      status: ride.status as RideStatus,
+      paymentMethod: ride.paymentMethod,
+      estimatedFare: ride.estimatedFare ?? 0,
+      estimatedDistanceMeters: ride.estimatedDistanceMeters ?? 0,
+      estimatedDurationSeconds: ride.estimatedDurationSeconds ?? 0,
+      pickupLatitude: ride.location?.pickupLatitude ?? 0,
+      pickupLongitude: ride.location?.pickupLongitude ?? 0,
+      pickupAddress: ride.location?.pickupAddress ?? '',
+      dropLatitude: ride.location?.dropLatitude ?? 0,
+      dropLongitude: ride.location?.dropLongitude ?? 0,
+      dropAddress: ride.location?.dropAddress ?? '',
+      requestedAt: ride.requestedAt ? new Date(ride.requestedAt).toISOString() : new Date().toISOString(),
+      createdAt: ride.createdAt ? new Date(ride.createdAt).toISOString() : new Date().toISOString(),
+      updatedAt: ride.updatedAt ? new Date(ride.updatedAt).toISOString() : new Date().toISOString(),
+    };
   }
 }
