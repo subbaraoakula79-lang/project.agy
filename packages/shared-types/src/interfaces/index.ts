@@ -56,9 +56,23 @@ export interface FareEstimate {
   estimatedDurationMinutes: number;
 }
 
+/** User profile response object. */
+export interface UserResponse {
+  id: string;
+  phoneNumber?: string | null;
+  email?: string | null;
+  firstName?: string | null;
+  lastName?: string | null;
+  role: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
 /** JWT token pair returned after authentication. */
 export interface AuthTokens {
   accessToken: string;
   refreshToken: string;
   expiresIn: number;
+  user?: UserResponse;
 }
