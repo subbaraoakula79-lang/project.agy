@@ -1,5 +1,4 @@
-import { LatLng, FareEstimate } from '@yatra-seva/shared-types';
-import { VehicleType } from '@yatra-seva/shared-types';
+import { FareEstimate, VehicleType } from '@yatra-seva/shared-types';
 
 /**
  * Fare calculation service contract.

@@ -45,8 +45,10 @@ yarn-error.log*
 # Test coverage
 coverage/
 
-# Prisma
+# Prisma & SQLite
 packages/db/prisma/migrations/**/migration_lock.toml
+*.db
+*.db-journal
 
 # Turbo
 .turbo/
