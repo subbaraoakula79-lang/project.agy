@@ -1,0 +1,301 @@
+// ================================================================
+// YatraSeva — Prisma Schema
+// ================================================================
+// Using SQLite for development. Switch datasource to PostgreSQL
+// for staging/production by changing the provider and url.
+// ================================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ────────────────────────────────────────────────────────────────
+// USER & PROFILES
+// ────────────────────────────────────────────────────────────────
+
+model User {
+  id            String    @id @default(uuid())
+  phoneNumber   String?   @unique
+  email         String?   @unique
+  passwordHash  String?   // Only for ADMIN users
+  firstName     String?
+  lastName      String?
+  role          String    // UserRole enum: RIDER, DRIVER, ADMIN
+  isActive      Boolean   @default(true)
+  deletedAt     DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  riderProfile  RiderProfile?
+  driverProfile DriverProfile?
+  notifications Notification[]
+  ridesAsRider  Ride[]    @relation("RiderRides")
+  ratingsGiven  Rating[]  @relation("RaterRatings")
+  ratingsReceived Rating[] @relation("RateeRatings")
+
+  @@index([role])
+  @@index([phoneNumber])
+}
+
+model RiderProfile {
+  id              String   @id @default(uuid())
+  userId          String   @unique
+  user            User     @relation(fields: [userId], references: [id])
+  preferredPayment String  @default("CASH") // PaymentMethod enum
+  totalRides      Int      @default(0)
+  averageRating   Float    @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model DriverProfile {
+  id              String    @id @default(uuid())
+  userId          String    @unique
+  user            User      @relation(fields: [userId], references: [id])
+  cityId          String
+  city            City      @relation(fields: [cityId], references: [id])
+  status          String    @default("OFFLINE") // DriverStatus enum
+  isVerified      Boolean   @default(false)
+  isOnboarded     Boolean   @default(false)
+  currentLatitude Float?
+  currentLongitude Float?
+  lastLocationAt  DateTime?
+  totalRides      Int       @default(0)
+  averageRating   Float     @default(0)
+  totalEarnings   Float     @default(0)
+  deletedAt       DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  vehicles        Vehicle[]
+  documents       DriverDocument[]
+  rides           Ride[]    @relation("DriverRides")
+
+  @@index([cityId, status])
+  @@index([status])
+}
+
+// ────────────────────────────────────────────────────────────────
+// VEHICLES & DOCUMENTS
+// ────────────────────────────────────────────────────────────────
+
+model VehicleType {
+  id          String   @id @default(uuid())
+  name        String   @unique // BIKE, AUTO, CAB
+  displayName String   // "Bike", "Auto Rickshaw", "Cab"
+  maxPassengers Int
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  vehicles    Vehicle[]
+  pricingConfigs PricingConfig[]
+}
+
+model Vehicle {
+  id              String        @id @default(uuid())
+  driverProfileId String
+  driverProfile   DriverProfile @relation(fields: [driverProfileId], references: [id])
+  vehicleTypeId   String
+  vehicleType     VehicleType   @relation(fields: [vehicleTypeId], references: [id])
+  registrationNumber String     @unique
+  make            String?
+  model           String?
+  year            Int?
+  color           String?
+  isActive        Boolean       @default(true)
+  isDefault       Boolean       @default(false)
+  deletedAt       DateTime?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  rides           Ride[]
+
+  @@index([driverProfileId])
+  @@index([vehicleTypeId])
+}
+
+model DriverDocument {
+  id              String        @id @default(uuid())
+  driverProfileId String
+  driverProfile   DriverProfile @relation(fields: [driverProfileId], references: [id])
+  type            String        // DocumentType enum
+  documentUrl     String
+  status          String        @default("PENDING") // DocumentStatus enum
+  rejectionReason String?
+  expiresAt       DateTime?
+  verifiedAt      DateTime?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@index([driverProfileId, type])
+}
+
+// ────────────────────────────────────────────────────────────────
+// RIDES & LOCATIONS
+// ────────────────────────────────────────────────────────────────
+
+model Ride {
+  id              String        @id @default(uuid())
+  riderId         String
+  rider           User          @relation("RiderRides", fields: [riderId], references: [id])
+  driverProfileId String?
+  driverProfile   DriverProfile? @relation("DriverRides", fields: [driverProfileId], references: [id])
+  vehicleId       String?
+  vehicle         Vehicle?      @relation(fields: [vehicleId], references: [id])
+  vehicleTypeId   String
+  cityId          String
+  city            City          @relation(fields: [cityId], references: [id])
+  status          String        @default("REQUESTED") // RideStatus enum
+  paymentMethod   String        @default("CASH") // PaymentMethod enum
+
+  // Fare details
+  estimatedFare   Float?
+  actualFare      Float?
+  estimatedDistanceMeters Int?
+  actualDistanceMeters    Int?
+  estimatedDurationSeconds Int?
+  actualDurationSeconds    Int?
+  surgeMultiplier Float         @default(1.0)
+
+  // Timestamps for lifecycle analytics
+  requestedAt     DateTime      @default(now())
+  acceptedAt      DateTime?
+  driverArrivedAt DateTime?
+  startedAt       DateTime?
+  completedAt     DateTime?
+  cancelledAt     DateTime?
+  cancellationReason String?
+
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  location        RideLocation?
+  payment         Payment?
+  rating          Rating?
+
+  @@index([riderId])
+  @@index([driverProfileId])
+  @@index([status])
+  @@index([cityId, status])
+}
+
+model RideLocation {
+  id              String   @id @default(uuid())
+  rideId          String   @unique
+  ride            Ride     @relation(fields: [rideId], references: [id])
+  pickupLatitude  Float
+  pickupLongitude Float
+  pickupAddress   String
+  dropLatitude    Float
+  dropLongitude   Float
+  dropAddress     String
+  routePolyline   String?  // Encoded polyline for map rendering
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+// ────────────────────────────────────────────────────────────────
+// PAYMENTS
+// ────────────────────────────────────────────────────────────────
+
+model Payment {
+  id              String   @id @default(uuid())
+  rideId          String   @unique
+  ride            Ride     @relation(fields: [rideId], references: [id])
+  amount          Float
+  currency        String   @default("INR")
+  method          String   // PaymentMethod enum
+  status          String   @default("PENDING") // PaymentStatus enum
+  transactionId   String?  // External provider transaction ID
+  failureReason   String?
+  paidAt          DateTime?
+  refundedAt      DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([status])
+}
+
+// ────────────────────────────────────────────────────────────────
+// RATINGS
+// ────────────────────────────────────────────────────────────────
+
+model Rating {
+  id          String   @id @default(uuid())
+  rideId      String   @unique
+  ride        Ride     @relation(fields: [rideId], references: [id])
+  raterId     String
+  rater       User     @relation("RaterRatings", fields: [raterId], references: [id])
+  rateeId     String
+  ratee       User     @relation("RateeRatings", fields: [rateeId], references: [id])
+  score       Int      // 1-5
+  comment     String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([rateeId])
+}
+
+// ────────────────────────────────────────────────────────────────
+// NOTIFICATIONS
+// ────────────────────────────────────────────────────────────────
+
+model Notification {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  title       String
+  body        String
+  data        String?  // JSON string for additional payload
+  isRead      Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  @@index([userId, isRead])
+}
+
+// ────────────────────────────────────────────────────────────────
+// CITY & PRICING
+// ────────────────────────────────────────────────────────────────
+
+model City {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  state       String
+  country     String   @default("India")
+  latitude    Float
+  longitude   Float
+  isActive    Boolean  @default(true)
+  timezone    String   @default("Asia/Kolkata")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  pricingConfigs PricingConfig[]
+  driverProfiles DriverProfile[]
+  rides          Ride[]
+}
+
+model PricingConfig {
+  id              String      @id @default(uuid())
+  cityId          String
+  city            City        @relation(fields: [cityId], references: [id])
+  vehicleTypeId   String
+  vehicleType     VehicleType @relation(fields: [vehicleTypeId], references: [id])
+  baseFare        Float       // Base fare in INR
+  perKmRate       Float       // Rate per kilometer
+  perMinRate      Float       // Rate per minute
+  minimumFare     Float       // Minimum charge
+  surgeMultiplier Float       @default(1.0)
+  isActive        Boolean     @default(true)
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  @@unique([cityId, vehicleTypeId])
+  @@index([cityId, vehicleTypeId])
+}

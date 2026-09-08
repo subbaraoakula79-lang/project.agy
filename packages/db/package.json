@@ -1,0 +1,33 @@
+{
+  "name": "@yatra-seva/db",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Prisma schema, client, migrations, and seed data",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "type-check": "tsc --noEmit",
+    "generate": "prisma generate",
+    "migrate": "prisma migrate dev",
+    "migrate:deploy": "prisma migrate deploy",
+    "seed": "ts-node prisma/seed.ts",
+    "studio": "prisma studio",
+    "db:push": "prisma db push",
+    "clean": "rm -rf dist",
+    "test": "echo \"No tests yet\" && exit 0"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.9.0",
+    "@yatra-seva/shared-types": "*"
+  },
+  "devDependencies": {
+    "prisma": "^6.9.0",
+    "typescript": "^5.8.0",
+    "ts-node": "^10.9.0",
+    "@types/node": "^22.0.0"
+  },
+  "prisma": {
+    "seed": "ts-node prisma/seed.ts"
+  }
+}

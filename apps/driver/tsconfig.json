@@ -1,0 +1,16 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "target": "ES2022",
+    "jsx": "react-jsx",
+    "lib": ["ES2022", "DOM"],
+    "strict": true,
+    "paths": {
+      "@/*": ["./app/*"]
+    }
+  },
+  "include": ["app", "**/*.ts", "**/*.tsx"],
+  "exclude": ["node_modules", ".expo"]
+}

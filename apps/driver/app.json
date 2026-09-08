@@ -1,0 +1,28 @@
+{
+  "expo": {
+    "name": "YatraSeva Captain",
+    "slug": "yatra-seva-driver",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "scheme": "yatrasevadriver",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.yatraseeva.driver"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#0f3460"
+      },
+      "package": "com.yatraseeva.driver"
+    },
+    "web": {
+      "bundler": "metro",
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-router"
+    ]
+  }
+}

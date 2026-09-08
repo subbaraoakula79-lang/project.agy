@@ -1,0 +1,28 @@
+{
+  "expo": {
+    "name": "YatraSeva Rider",
+    "slug": "yatra-seva-rider",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "scheme": "yatrasevarider",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.yatraseeva.rider"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#1a1a2e"
+      },
+      "package": "com.yatraseeva.rider"
+    },
+    "web": {
+      "bundler": "metro",
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-router"
+    ]
+  }
+}
