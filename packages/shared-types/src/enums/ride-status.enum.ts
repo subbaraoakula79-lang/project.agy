@@ -15,12 +15,18 @@ export enum RideStatus {
   DRIVER_ASSIGNED = 'DRIVER_ASSIGNED',
 
   /** Driver is navigating to the pickup location. */
+  DRIVER_ARRIVING = 'DRIVER_ARRIVING',
+
+  /** Driver is navigating to the pickup location (compatibility alias). */
   DRIVER_EN_ROUTE = 'DRIVER_EN_ROUTE',
 
   /** Driver has arrived at the pickup location. */
   DRIVER_ARRIVED = 'DRIVER_ARRIVED',
 
   /** Ride is actively underway. */
+  RIDE_STARTED = 'RIDE_STARTED',
+
+  /** Ride is actively underway (compatibility alias). */
   RIDE_IN_PROGRESS = 'RIDE_IN_PROGRESS',
 
   /** Ride finished, awaiting payment processing. */

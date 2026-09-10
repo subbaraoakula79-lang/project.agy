@@ -22,14 +22,17 @@
     "@nestjs/config": "^4.0.0",
     "@nestjs/core": "^11.0.0",
     "@nestjs/platform-express": "^11.0.0",
+    "@nestjs/platform-socket.io": "^11.2.3",
     "@nestjs/swagger": "^11.0.0",
-    "@yatra-seva/shared-types": "*",
-    "@yatra-seva/service-contracts": "*",
+    "@nestjs/websockets": "^11.2.3",
     "@yatra-seva/db": "*",
+    "@yatra-seva/service-contracts": "*",
+    "@yatra-seva/shared-types": "*",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.1",
     "reflect-metadata": "^0.2.2",
-    "rxjs": "^7.8.0"
+    "rxjs": "^7.8.0",
+    "socket.io": "^4.8.3"
   },
   "devDependencies": {
     "@nestjs/cli": "^11.0.0",

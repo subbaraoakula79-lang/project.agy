@@ -26,7 +26,16 @@ export const RIDE_STATE_TRANSITIONS: ReadonlyMap<RideStatus, ReadonlySet<RideSta
   [
     RideStatus.DRIVER_ASSIGNED,
     new Set([
+      RideStatus.DRIVER_ARRIVING,
       RideStatus.DRIVER_EN_ROUTE,
+      RideStatus.CANCELLED_BY_RIDER,
+      RideStatus.CANCELLED_BY_DRIVER,
+    ]),
+  ],
+  [
+    RideStatus.DRIVER_ARRIVING,
+    new Set([
+      RideStatus.DRIVER_ARRIVED,
       RideStatus.CANCELLED_BY_RIDER,
       RideStatus.CANCELLED_BY_DRIVER,
     ]),
@@ -42,10 +51,14 @@ export const RIDE_STATE_TRANSITIONS: ReadonlyMap<RideStatus, ReadonlySet<RideSta
   [
     RideStatus.DRIVER_ARRIVED,
     new Set([
+      RideStatus.RIDE_STARTED,
       RideStatus.RIDE_IN_PROGRESS,
-      RideStatus.CANCELLED_BY_RIDER,
       RideStatus.CANCELLED_BY_DRIVER,
     ]),
+  ],
+  [
+    RideStatus.RIDE_STARTED,
+    new Set([RideStatus.RIDE_COMPLETED]),
   ],
   [
     RideStatus.RIDE_IN_PROGRESS,
@@ -99,13 +112,17 @@ export function getTerminalStates(): RideStatus[] {
 }
 
 /**
- * Returns the set of states considered "active" (ride is in progress).
+ * Returns the set of states considered "active" (ride is in progress or active trip).
  */
 export function getActiveRideStates(): RideStatus[] {
   return [
     RideStatus.DRIVER_ASSIGNED,
+    RideStatus.DRIVER_ARRIVING,
     RideStatus.DRIVER_EN_ROUTE,
     RideStatus.DRIVER_ARRIVED,
+    RideStatus.RIDE_STARTED,
     RideStatus.RIDE_IN_PROGRESS,
+    RideStatus.RIDE_COMPLETED,
+    RideStatus.PAYMENT_PENDING,
   ];
 }

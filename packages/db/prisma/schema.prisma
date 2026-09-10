@@ -75,6 +75,8 @@ model DriverProfile {
   vehicles        Vehicle[]
   documents       DriverDocument[]
   rides           Ride[]    @relation("DriverRides")
+  locationHistory DriverLocation[]
+  rideRequests    DriverRideRequest[]
 
   @@index([cityId, status])
   @@index([status])
@@ -167,6 +169,7 @@ model Ride {
   // Timestamps for lifecycle analytics
   requestedAt     DateTime      @default(now())
   acceptedAt      DateTime?
+  arrivingAt      DateTime?
   driverArrivedAt DateTime?
   startedAt       DateTime?
   completedAt     DateTime?
@@ -179,6 +182,7 @@ model Ride {
   location        RideLocation?
   payment         Payment?
   rating          Rating?
+  driverRequests  DriverRideRequest[]
 
   @@index([riderId])
   @@index([driverProfileId])
@@ -298,4 +302,45 @@ model PricingConfig {
 
   @@unique([cityId, vehicleTypeId])
   @@index([cityId, vehicleTypeId])
+}
+
+// ────────────────────────────────────────────────────────────────
+// DRIVER LOCATION & RIDE REQUESTS (PHASE 4)
+// ────────────────────────────────────────────────────────────────
+
+model DriverLocation {
+  id              String        @id @default(uuid())
+  driverProfileId String
+  driverProfile   DriverProfile @relation(fields: [driverProfileId], references: [id], onDelete: Cascade)
+  latitude        Float
+  longitude       Float
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@index([driverProfileId])
+  @@index([driverProfileId, updatedAt])
+}
+
+enum DriverRideRequestStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  EXPIRED
+}
+
+model DriverRideRequest {
+  id              String                  @id @default(uuid())
+  rideId          String
+  ride            Ride                    @relation(fields: [rideId], references: [id], onDelete: Cascade)
+  driverProfileId String
+  driverProfile   DriverProfile           @relation(fields: [driverProfileId], references: [id], onDelete: Cascade)
+  status          DriverRideRequestStatus @default(PENDING)
+  expiresAt       DateTime
+  respondedAt     DateTime?
+  createdAt       DateTime                @default(now())
+  updatedAt       DateTime                @updatedAt
+
+  @@unique([rideId, driverProfileId])
+  @@index([driverProfileId, status])
+  @@index([rideId, status])
 }

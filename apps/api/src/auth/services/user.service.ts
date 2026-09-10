@@ -1,5 +1,6 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Optional } from '@nestjs/common';
 import { UserRole } from '@yatra-seva/shared-types';
+import { PrismaService } from '../../database/prisma.service';
 
 export interface UserRecord {
   id: string;
@@ -19,7 +20,7 @@ export class UserService {
   // Mock in-memory user registry for development fallback when DB process is offline
   private readonly mockUsers: Map<string, UserRecord> = new Map();
 
-  constructor() {
+  constructor(@Optional() private readonly prisma?: PrismaService) {
     this.seedMockUsers();
   }
 
@@ -77,12 +78,46 @@ export class UserService {
 
   /** Find user by ID. */
   async findById(id: string): Promise<UserRecord | null> {
+    if (this.prisma) {
+      const user = await this.prisma.user.findUnique({ where: { id } });
+      if (user) {
+        return {
+          id: user.id,
+          phoneNumber: user.phoneNumber,
+          email: user.email,
+          passwordHash: user.passwordHash,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          role: user.role as UserRole,
+          isActive: user.isActive,
+          createdAt: user.createdAt.toISOString(),
+          updatedAt: user.updatedAt.toISOString(),
+        };
+      }
+    }
     return this.mockUsers.get(id) || null;
   }
 
   /** Find user by phone number. */
   async findByPhone(phone: string): Promise<UserRecord | null> {
     const normalized = this.normalizePhoneNumber(phone);
+    if (this.prisma) {
+      const user = await this.prisma.user.findUnique({ where: { phoneNumber: normalized } });
+      if (user) {
+        return {
+          id: user.id,
+          phoneNumber: user.phoneNumber,
+          email: user.email,
+          passwordHash: user.passwordHash,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          role: user.role as UserRole,
+          isActive: user.isActive,
+          createdAt: user.createdAt.toISOString(),
+          updatedAt: user.updatedAt.toISOString(),
+        };
+      }
+    }
     for (const u of this.mockUsers.values()) {
       if (u.phoneNumber === normalized) return u;
     }
@@ -92,6 +127,23 @@ export class UserService {
   /** Find user by email. */
   async findByEmail(email: string): Promise<UserRecord | null> {
     const lower = email.trim().toLowerCase();
+    if (this.prisma) {
+      const user = await this.prisma.user.findUnique({ where: { email: lower } });
+      if (user) {
+        return {
+          id: user.id,
+          phoneNumber: user.phoneNumber,
+          email: user.email,
+          passwordHash: user.passwordHash,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          role: user.role as UserRole,
+          isActive: user.isActive,
+          createdAt: user.createdAt.toISOString(),
+          updatedAt: user.updatedAt.toISOString(),
+        };
+      }
+    }
     for (const u of this.mockUsers.values()) {
       if (u.email?.toLowerCase() === lower) return u;
     }
@@ -103,6 +155,33 @@ export class UserService {
     const normalized = this.normalizePhoneNumber(phone);
     const existing = await this.findByPhone(normalized);
     if (existing) return existing;
+
+    if (this.prisma) {
+      const created = await this.prisma.user.create({
+        data: {
+          phoneNumber: normalized,
+          role: UserRole.RIDER,
+          isActive: true,
+          riderProfile: {
+            create: {
+              preferredPayment: 'CASH',
+            },
+          },
+        },
+      });
+      return {
+        id: created.id,
+        phoneNumber: created.phoneNumber,
+        email: created.email,
+        passwordHash: created.passwordHash,
+        firstName: created.firstName,
+        lastName: created.lastName,
+        role: created.role as UserRole,
+        isActive: created.isActive,
+        createdAt: created.createdAt.toISOString(),
+        updatedAt: created.updatedAt.toISOString(),
+      };
+    }
 
     const newUser: UserRecord = {
       id: `rider-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
@@ -122,6 +201,36 @@ export class UserService {
     const normalized = this.normalizePhoneNumber(phone);
     const existing = await this.findByPhone(normalized);
     if (existing) return existing;
+
+    if (this.prisma) {
+      const created = await this.prisma.user.create({
+        data: {
+          phoneNumber: normalized,
+          role: UserRole.DRIVER,
+          isActive: true,
+          driverProfile: {
+            create: {
+              cityId: 'd75253d1-4456-42c6-8483-e726bd20d156',
+              status: 'OFFLINE',
+              isVerified: true,
+              isOnboarded: true,
+            },
+          },
+        },
+      });
+      return {
+        id: created.id,
+        phoneNumber: created.phoneNumber,
+        email: created.email,
+        passwordHash: created.passwordHash,
+        firstName: created.firstName,
+        lastName: created.lastName,
+        role: created.role as UserRole,
+        isActive: created.isActive,
+        createdAt: created.createdAt.toISOString(),
+        updatedAt: created.updatedAt.toISOString(),
+      };
+    }
 
     const newUser: UserRecord = {
       id: `driver-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,

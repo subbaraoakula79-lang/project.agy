@@ -76,3 +76,5 @@ export interface AuthTokens {
   expiresIn: number;
   user?: UserResponse;
 }
+
+export * from './driver-ride-request.interface';

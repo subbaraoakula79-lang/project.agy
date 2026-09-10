@@ -13,7 +13,7 @@
     "noUnusedLocals": false,
     "noUnusedParameters": false,
     "sourceMap": true,
-    "incremental": true,
+    "incremental": false,
     "strictNullChecks": true
   },
   "include": ["src"],

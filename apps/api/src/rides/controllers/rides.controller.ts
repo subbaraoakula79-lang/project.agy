@@ -62,6 +62,31 @@ export class RidesController {
     return { success: true, data };
   }
 
+  /** GET /rides/active — Get current active ride for authenticated user. */
+  @Get('active')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  async getActiveRide(
+    @CurrentUser('userId') userId: string,
+    @CurrentUser('role') role: UserRole,
+  ): Promise<ApiResponse<RideRecord | null>> {
+    const data = await this.ridesService.getActiveRide(userId, role);
+    return { success: true, data };
+  }
+
+  /** POST /rides/:id/cancel — Rider cancels ride (governed by state machine rules). */
+  @Post(':id/cancel')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.RIDER)
+  @HttpCode(HttpStatus.OK)
+  async cancelRide(
+    @Param('id') rideId: string,
+    @CurrentUser('userId') userId: string,
+    @Body('reason') reason?: string,
+  ): Promise<ApiResponse<RideRecord>> {
+    const data = await this.ridesService.cancelRiderRide(userId, rideId, reason);
+    return { success: true, data };
+  }
+
   /** GET /rides/:id — Get specific ride by ID (Enforces ownership). */
   @Get(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)

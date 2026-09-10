@@ -4,8 +4,10 @@ import { APP_FILTER } from '@nestjs/core';
 import { AuthModule } from './auth/auth.module';
 import { PrismaExceptionFilter } from './common/filters/prisma-exception.filter';
 import { DatabaseModule } from './database/database.module';
+import { DriversModule } from './drivers/drivers.module';
 import { HealthModule } from './health/health.module';
 import { MockServicesModule } from './providers/mock/mock-services.module';
+import { RealtimeModule } from './realtime/realtime.module';
 import { RidesModule } from './rides/rides.module';
 
 @Module({
@@ -19,9 +21,11 @@ import { RidesModule } from './rides/rides.module';
     // Database module
     DatabaseModule,
 
-    // Core modules
+    // Realtime & Core modules
+    RealtimeModule,
     HealthModule,
     AuthModule,
+    DriversModule,
     RidesModule,
 
     // Mock service providers (for development)

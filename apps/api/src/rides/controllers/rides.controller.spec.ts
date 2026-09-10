@@ -46,4 +46,38 @@ describe('RidesController', () => {
     expect(res.success).toBe(true);
     expect(res.data).toHaveLength(3);
   });
+
+  it('should get active ride', async () => {
+    mockPrisma.ride.findFirst = jest.fn().mockResolvedValue({
+      id: 'ride-1',
+      status: 'DRIVER_ARRIVING',
+      location: {},
+    });
+    const res = await controller.getActiveRide('user-1', 'RIDER' as any);
+    expect(res.success).toBe(true);
+    expect(res.data?.id).toBe('ride-1');
+  });
+
+  it('should cancel ride for rider', async () => {
+    mockPrisma.ride.findUnique = jest.fn().mockResolvedValue({
+      id: 'ride-1',
+      riderId: 'user-1',
+      status: 'DRIVER_ASSIGNED',
+      driverProfileId: 'driver-1',
+      location: {},
+    });
+    mockPrisma.driverProfile = { update: jest.fn() };
+    mockPrisma.driverRideRequest = { updateMany: jest.fn() };
+    mockPrisma.$transaction = jest.fn((cb: any) => cb(mockPrisma));
+    mockPrisma.ride.update = jest.fn().mockResolvedValue({
+      id: 'ride-1',
+      riderId: 'user-1',
+      status: 'CANCELLED_BY_RIDER',
+      location: {},
+    });
+
+    const res = await controller.cancelRide('ride-1', 'user-1', 'Changed plan');
+    expect(res.success).toBe(true);
+    expect(res.data?.status).toBe('CANCELLED_BY_RIDER');
+  });
 });

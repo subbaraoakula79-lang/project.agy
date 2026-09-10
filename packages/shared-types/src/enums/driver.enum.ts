@@ -2,6 +2,7 @@
 export enum DriverStatus {
   OFFLINE = 'OFFLINE',
   ONLINE = 'ONLINE',
+  ONLINE_AVAILABLE = 'ONLINE_AVAILABLE',
   BUSY = 'BUSY', // Currently on a ride
 }
 
