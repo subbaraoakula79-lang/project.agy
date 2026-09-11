@@ -61,7 +61,7 @@ export class RidesGateway implements OnGatewayConnection, OnGatewayDisconnect {
       };
 
       // Join user specific room
-      await client.join(`user:${payload.sub}`);
+      client.join(`user:${payload.sub}`);
 
       // If driver, automatically enroll into driver's personal offer room
       if (payload.role === 'DRIVER' && this.prisma) {
@@ -71,7 +71,7 @@ export class RidesGateway implements OnGatewayConnection, OnGatewayDisconnect {
         });
         if (profile) {
           client.user.driverProfileId = profile.id;
-          await client.join(`driver:${profile.id}`);
+          client.join(`driver:${profile.id}`);
         }
       }
 
@@ -161,7 +161,7 @@ export class RidesGateway implements OnGatewayConnection, OnGatewayDisconnect {
       }
     }
 
-    await client.join(`ride:${data.rideId}`);
+    client.join(`ride:${data.rideId}`);
     return { success: true, joined: `ride:${data.rideId}` };
   }
 
@@ -172,7 +172,7 @@ export class RidesGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @MessageBody() data: { rideId: string },
   ) {
     if (data?.rideId) {
-      await client.leave(`ride:${data.rideId}`);
+      client.leave(`ride:${data.rideId}`);
     }
     return { success: true };
   }
@@ -218,7 +218,7 @@ export class RidesGateway implements OnGatewayConnection, OnGatewayDisconnect {
       return { success: false, error: 'Forbidden: You can only subscribe to your own driver room' };
     }
 
-    await client.join(`driver:${myDriverProfileId}`);
+    client.join(`driver:${myDriverProfileId}`);
     return { success: true, joined: `driver:${myDriverProfileId}` };
   }
 }

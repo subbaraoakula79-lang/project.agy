@@ -9,6 +9,7 @@ import { HealthModule } from './health/health.module';
 import { MockServicesModule } from './providers/mock/mock-services.module';
 import { RealtimeModule } from './realtime/realtime.module';
 import { RidesModule } from './rides/rides.module';
+import { PaymentsModule } from './payments/payments.module';
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { RidesModule } from './rides/rides.module';
     AuthModule,
     DriversModule,
     RidesModule,
+    PaymentsModule,
 
     // Mock service providers (for development)
     MockServicesModule,

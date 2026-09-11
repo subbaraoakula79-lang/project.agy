@@ -1,4 +1,3 @@
-/** Supported payment methods. */
 export enum PaymentMethod {
   CASH = 'CASH',
   UPI = 'UPI',
@@ -8,7 +7,9 @@ export enum PaymentMethod {
 export enum PaymentStatus {
   PENDING = 'PENDING',
   PROCESSING = 'PROCESSING',
-  COMPLETED = 'COMPLETED',
+  SUCCEEDED = 'SUCCEEDED',
+  COMPLETED = 'SUCCEEDED', // Compatibility alias for SUCCEEDED
   FAILED = 'FAILED',
+  CANCELLED = 'CANCELLED',
   REFUNDED = 'REFUNDED',
 }

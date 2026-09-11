@@ -23,6 +23,11 @@ import { MockNotificationService } from './mock-notification.service';
 @Global()
 @Module({
   providers: [
+    MockOtpService,
+    MockPaymentService,
+    MockMapService,
+    MockRoutingService,
+    MockNotificationService,
     {
       provide: 'IOtpService',
       useFactory: (config: ConfigService) => {
@@ -85,6 +90,11 @@ import { MockNotificationService } from './mock-notification.service';
     },
   ],
   exports: [
+    MockOtpService,
+    MockPaymentService,
+    MockMapService,
+    MockRoutingService,
+    MockNotificationService,
     'IOtpService',
     'IPaymentService',
     'IMapService',

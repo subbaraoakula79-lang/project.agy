@@ -1,0 +1,132 @@
+﻿[32m[Nest] 17732  - [39m11/09/2026, 10:56:53 am [32m    LOG[39m [38;5;3m[NestFactory] [39m[32mStarting Nest application...[39m
+[32m[Nest] 17732  - [39m11/09/2026, 10:56:53 am [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mAppModule dependencies initialized[39m[38;5;3m +15ms[39m
+[32m[Nest] 17732  - [39m11/09/2026, 10:56:53 am [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mDatabaseModule dependencies initialized[39m[38;5;3m +0ms[39m
+node.exe : [31m[Nest] 
+17732  - [39m11/09/2026, 
+10:56:53 am [31m  
+ERROR[39m [38;5;3m[Except
+ionHandler] [39mUnknownDep
+endenciesException 
+[Error]: Nest can't 
+resolve dependencies of 
+the AuthService 
+(UserService, ?, 
+TokenService, 
+PasswordService). Please 
+make sure that the 
+argument MockOtpService at 
+index [1] is available in 
+the AuthModule module.
+At line:1 char:1
++ & "C:\Program 
+Files\nodejs/node.exe" 
+"C:\Program 
+Files\nodejs/node_mo ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~
+    + CategoryInfo         
+     : NotSpecified: ([3  
+  1m[Nest] 177...hModule   
+  module.:String) [], R    
+emoteException
+    + FullyQualifiedErrorI 
+   d : NativeCommandError
+ 
+
+Potential solutions:
+- Is AuthModule a valid 
+NestJS module?
+- If MockOtpService is a 
+provider, is it part of 
+the current AuthModule?
+- If MockOtpService is 
+exported from a separate 
+@Module, is that module 
+imported within AuthModule?
+  @Module({
+    imports: [ /* the 
+Module containing 
+MockOtpService */ ]
+  })
+
+For more common dependency 
+resolution issues, see: htt
+ps://docs.nestjs.com/faq/co
+mmon-errors
+    at Injector.lookupCompo
+nentInParentModules (C:\Use
+rs\prgc\Documents\rapido\pr
+oject.agy\node_modules\[4m
+@nestjs\core[24m\injector\
+injector.js:312:19)
+    at async resolveParam (
+C:\Users\prgc\Documents\rap
+ido\project.agy\node_module
+s\[4m@nestjs\core[24m\inj
+ector\injector.js:151:38)
+    at async Promise.all 
+(index 1)
+    at async Injector.resol
+veConstructorParams (C:\Use
+rs\prgc\Documents\rapido\pr
+oject.agy\node_modules\[4m
+@nestjs\core[24m\injector\
+injector.js:180:27)
+    at async 
+Injector.loadInstance (C:\U
+sers\prgc\Documents\rapido\
+project.agy\node_modules\[
+4m@nestjs\core[24m\injecto
+r\injector.js:78:13)
+    at async 
+Injector.loadProvider (C:\U
+sers\prgc\Documents\rapido\
+project.agy\node_modules\[
+4m@nestjs\core[24m\injecto
+r\injector.js:112:9)
+    at async C:\Users\prgc\
+Documents\rapido\project.ag
+y\node_modules\[4m@nestjs\
+core[24m\injector\instance
+-loader.js:56:13
+    at async Promise.all 
+(index 3)
+    at async InstanceLoader
+.createInstancesOfProviders
+ (C:\Users\prgc\Documents\r
+apido\project.agy\node_modu
+les\[4m@nestjs\core[24m\i
+njector\instance-loader.js:
+55:9)
+    at async C:\Users\prgc\
+Documents\rapido\project.ag
+y\node_modules\[4m@nestjs\
+core[24m\injector\instance
+-loader.js:40:13 {
+  type: 
+[32m'AuthService'[39m,
+  context: {
+    index: [33m1[39m,
+    dependencies: [
+      [36m[class 
+UserService][39m,
+      [36m[class 
+MockOtpService][39m,
+      [36m[class 
+TokenService][39m,
+      [36m[class 
+PasswordService][39m
+    ],
+    name: [36m[class 
+MockOtpService][39m
+  },
+  metadata: {
+    id: [32m'd8a268c786f87
+0871d2a3'[39m
+  },
+  moduleRef: {
+    id: [32m'af563275d6af5
+e9e74227'[39m
+  }
+}

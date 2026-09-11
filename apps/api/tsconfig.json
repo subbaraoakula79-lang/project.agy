@@ -14,7 +14,8 @@
     "noUnusedParameters": false,
     "sourceMap": true,
     "incremental": false,
-    "strictNullChecks": true
+    "strictNullChecks": true,
+    "skipLibCheck": true
   },
   "include": ["src"],
   "exclude": ["node_modules", "dist", "test"]

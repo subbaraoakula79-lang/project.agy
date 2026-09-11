@@ -13,6 +13,12 @@ export const REALTIME_EVENTS = {
 
   // Driver location updates
   DRIVER_LOCATION_UPDATED: 'driver:location:updated',
+
+  // Payment events
+  PAYMENT_INITIATED: 'payment:initiated',
+  PAYMENT_PROCESSING: 'payment:processing',
+  PAYMENT_SUCCEEDED: 'payment:succeeded',
+  PAYMENT_FAILED: 'payment:failed',
 } as const;
 
 export type RealtimeEventName = (typeof REALTIME_EVENTS)[keyof typeof REALTIME_EVENTS];

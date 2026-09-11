@@ -64,11 +64,27 @@ export class RealtimeService {
   }
 
   /** Notify ride room when assigned driver's location updates */
-  notifyDriverLocationUpdated(rideId: string, location: { latitude: number; longitude: number }) {
+  notifyDriverLocationUpdated(
+    rideId: string,
+    location: {
+      latitude: number;
+      longitude: number;
+      accuracy?: number | null;
+      heading?: number | null;
+      speed?: number | null;
+      recordedAt?: string;
+    },
+  ) {
     this.emitToRide(rideId, REALTIME_EVENTS.DRIVER_LOCATION_UPDATED, {
       rideId,
-      ...location,
-      timestamp: new Date().toISOString(),
+      latitude: location.latitude,
+      longitude: location.longitude,
+      accuracy: location.accuracy ?? null,
+      heading: location.heading ?? null,
+      speed: location.speed ?? null,
+      recordedAt: location.recordedAt ?? new Date().toISOString(),
+      receivedAt: new Date().toISOString(),
+      freshness: 'FRESH',
     });
   }
 }

@@ -46,6 +46,9 @@ export class DriverMatchingService implements IDriverMatchingService {
       }
     }
 
+    const staleThresholdSeconds = parseInt(process.env.LOCATION_STALE_AFTER_SECONDS || '300', 10);
+    const staleCutoff = new Date(Date.now() - staleThresholdSeconds * 1000);
+
     // Query candidate drivers from Neon PostgreSQL
     const candidateDrivers = await this.prisma.driverProfile.findMany({
       where: {
@@ -55,6 +58,7 @@ export class DriverMatchingService implements IDriverMatchingService {
         deletedAt: null,
         currentLatitude: { not: null },
         currentLongitude: { not: null },
+        lastLocationAt: { gte: staleCutoff },
         ...(params.cityId ? { cityId: params.cityId } : {}),
         id: excludedIds.size > 0 ? { notIn: Array.from(excludedIds) } : undefined,
         vehicles: {

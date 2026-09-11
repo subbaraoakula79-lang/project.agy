@@ -1,0 +1,33 @@
+﻿node.exe : PASS src/payment
+s/payments.concurrency.spec
+.ts
+At line:1 char:1
++ & "C:\Program 
+Files\nodejs/node.exe" 
+"C:\Program 
+Files\nodejs/node_mo ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~
+    + CategoryInfo         
+     : NotSpecified: (PAS  
+  S src/paymen...urrency   
+ .spec.ts:String) [], R    
+emoteException
+    + FullyQualifiedErrorI 
+   d : NativeCommandError
+ 
+[33m[Nest] 18204  - [39m11/09/2026, 10:51:42 am [33m   WARN[39m [38;5;3m[PaymentStateMachineService] [39m[33mIllegal payment transition attempted: SUCCEEDED -> PENDING[39m
+PASS src/payments/payments.
+security.spec.ts
+PASS src/payments/payments.
+service.spec.ts
+
+Test Suites: 3 passed, 3 
+total
+Tests:       17 passed, 17 
+total
+Snapshots:   0 total
+Time:        1.701 s
+Ran all test suites 
+matching /src\\payments/i.

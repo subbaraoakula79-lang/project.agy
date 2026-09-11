@@ -34,10 +34,14 @@ export interface InitiatePaymentParams {
 
 export interface PaymentResult {
   paymentId: string;
+  rideId?: string;
   status: PaymentStatus;
   amount: number;
   currency: string;
   method: PaymentMethod;
+  provider?: string;
+  providerPaymentId?: string;
   transactionId?: string;
   failureReason?: string;
+  paidAt?: string | null;
 }

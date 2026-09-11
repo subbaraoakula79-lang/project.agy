@@ -26,7 +26,10 @@ describe('RidesController', () => {
       mockMapService,
       mockRoutingService,
     );
-    controller = new RidesController(service);
+    const mockDriversService = {
+      getDriverLocationForRide: jest.fn(),
+    };
+    controller = new RidesController(service, mockDriversService as any);
   });
 
   it('should return Kakinada mock locations list', async () => {

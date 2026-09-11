@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, ActivityIndicator, ScrollView } from 'react-native';
+import * as Location from 'expo-location';
 
 interface LocationItem {
   name: string;
@@ -23,6 +24,29 @@ export default function RiderAppScreen() {
   const [phoneNumber, setPhoneNumber] = useState('+919000000001');
   const [otp, setOtp] = useState('123456');
   const [user, setUser] = useState<{ id: string; name: string; role: string } | null>(null);
+
+  // Device GPS State
+  const [gpsPermission, setGpsPermission] = useState<'UNDETERMINED' | 'GRANTED' | 'DENIED'>('UNDETERMINED');
+  const [currentGps, setCurrentGps] = useState<{ lat: number; lng: number; accuracy: number | null } | null>(null);
+  const [locationFreshness, setLocationFreshness] = useState<'FRESH' | 'STALE' | 'UNAVAILABLE'>('FRESH');
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status === 'granted') {
+          setGpsPermission('GRANTED');
+          const pos = await Location.getCurrentPositionAsync({});
+          setCurrentGps({ lat: pos.coords.latitude, lng: pos.coords.longitude, accuracy: pos.coords.accuracy });
+          setLocationFreshness('FRESH');
+        } else {
+          setGpsPermission('DENIED');
+        }
+      } catch (err) {
+        setGpsPermission('DENIED');
+      }
+    })();
+  }, []);
 
   // Booking state
   const [pickup, setPickup] = useState<LocationItem>(KAKINADA_LOCATIONS[0]!);
@@ -187,6 +211,16 @@ export default function RiderAppScreen() {
             <Text style={styles.mapSub}>Pickup: 🟢 {pickup.name}</Text>
             <Text style={styles.mapSub}>Drop: 🔴 {destination.name}</Text>
             <Text style={styles.mapSub}>Distance: ~5.35 km | Est: 13 mins</Text>
+            <Text style={styles.mapSub}>
+              📡 Rider GPS: {gpsPermission === 'GRANTED' && currentGps ? `Active (${currentGps.lat.toFixed(4)}, ${currentGps.lng.toFixed(4)})` : 'Permission Pending/Denied'}
+            </Text>
+            {locationFreshness !== 'FRESH' && (
+              <View style={{ marginTop: 8, padding: 6, backgroundColor: '#e74c3c22', borderRadius: 4 }}>
+                <Text style={{ color: '#e74c3c', fontSize: 12, fontWeight: '600' }}>
+                  ⚠️ Driver location updating... ({locationFreshness})
+                </Text>
+              </View>
+            )}
           </View>
 
           {/* Pickup Picker */}
@@ -328,6 +362,30 @@ export default function RiderAppScreen() {
             </>
           )}
 
+          {currentRide.status === 'COMPLETED' && (
+            <>
+              <Text style={styles.cardTitle}>Trip Completed & Paid! 🎉</Text>
+              <View style={[styles.statusBadge, { backgroundColor: '#2ecc71' }]}>
+                <Text style={styles.statusText}>STATUS: COMPLETED</Text>
+              </View>
+              <Text style={[styles.info, { color: '#2ecc71', fontWeight: 'bold' }]}>
+                Payment of ₹{currentRide.estimatedFare} ({currentRide.paymentMethod}) was successfully settled!
+              </Text>
+            </>
+          )}
+
+          {currentRide.status === 'PAYMENT_FAILED' && (
+            <>
+              <Text style={styles.cardTitle}>Payment Failed ⚠️</Text>
+              <View style={[styles.statusBadge, { backgroundColor: '#e74c3c' }]}>
+                <Text style={styles.statusText}>STATUS: PAYMENT_FAILED</Text>
+              </View>
+              <Text style={[styles.info, { color: '#ff6b6b' }]}>
+                Mock UPI transaction failed. Please retry payment or switch to Cash.
+              </Text>
+            </>
+          )}
+
           {currentRide.status === 'PAYMENT_PENDING' && (
             <>
               <Text style={styles.cardTitle}>Payment Pending ⏳</Text>
@@ -335,7 +393,7 @@ export default function RiderAppScreen() {
                 <Text style={styles.statusText}>STATUS: PAYMENT_PENDING</Text>
               </View>
               <Text style={[styles.info, { color: '#f39c12' }]}>
-                Trip finished! Fare of ₹{currentRide.estimatedFare} is pending payment settlement (Phase 5B).
+                Trip finished! Total fare: ₹{currentRide.estimatedFare} ({currentRide.paymentMethod}).
               </Text>
             </>
           )}
@@ -356,6 +414,58 @@ export default function RiderAppScreen() {
             <Text style={styles.rideDetailText}>💰 Fare: ₹{currentRide.estimatedFare}</Text>
             <Text style={styles.rideDetailText}>💳 Method: {currentRide.paymentMethod}</Text>
           </View>
+
+          {/* Payment Interactive Actions for Rider */}
+          {(currentRide.status === 'PAYMENT_PENDING' || currentRide.status === 'PAYMENT_FAILED') && (
+            <View style={{ width: '100%', marginTop: 10, gap: 10 }}>
+              {currentRide.paymentMethod === 'CASH' ? (
+                <View style={{ backgroundColor: '#0f3460', padding: 12, borderRadius: 8, alignItems: 'center' }}>
+                  <Text style={{ color: '#eaeaea', fontSize: 13, textAlign: 'center', marginBottom: 8 }}>
+                    💵 Please hand ₹{currentRide.estimatedFare} cash to Captain {currentRide.driver?.name || ''}.
+                    Captain will confirm cash collection on their app.
+                  </Text>
+                  <TouchableOpacity
+                    style={[styles.smallLogoutBtn, { backgroundColor: '#3498db' }]}
+                    onPress={() => setCurrentRide((prev) => (prev ? { ...prev, paymentMethod: 'UPI' } : null))}
+                  >
+                    <Text style={styles.smallLogoutText}>Switch to Mock UPI Payment 📱</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <View style={{ backgroundColor: '#0f3460', padding: 12, borderRadius: 8, alignItems: 'center' }}>
+                  <Text style={{ color: '#eaeaea', fontSize: 13, textAlign: 'center', marginBottom: 10 }}>
+                    📱 Pay ₹{currentRide.estimatedFare} via Mock UPI (Google Pay / PhonePe / Paytm)
+                  </Text>
+                  <TouchableOpacity
+                    style={[styles.button, { backgroundColor: '#27ae60', marginBottom: 8 }]}
+                    onPress={() => {
+                      setLoading(true);
+                      setTimeout(() => {
+                        setLoading(false);
+                        setCurrentRide((prev) => (prev ? { ...prev, status: 'COMPLETED' } : null));
+                      }, 1200);
+                    }}
+                  >
+                    {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Pay ₹{currentRide.estimatedFare} Now (UPI) ✅</Text>}
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[styles.smallLogoutBtn, { backgroundColor: '#e74c3c' }]}
+                    onPress={() => setCurrentRide((prev) => (prev ? { ...prev, status: 'PAYMENT_FAILED' } : null))}
+                  >
+                    <Text style={styles.smallLogoutText}>Simulate UPI Payment Failure 🧪</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[styles.smallLogoutBtn, { backgroundColor: '#f39c12', marginTop: 6 }]}
+                    onPress={() => setCurrentRide((prev) => (prev ? { ...prev, paymentMethod: 'CASH' } : null))}
+                  >
+                    <Text style={styles.smallLogoutText}>Switch to Cash 💵</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+            </View>
+          )}
 
           {/* Cancellation Control — Allowed only before arrival */}
           {(currentRide.status === 'DRIVER_ASSIGNED' || currentRide.status === 'DRIVER_ARRIVING') && (
@@ -415,10 +525,18 @@ export default function RiderAppScreen() {
                   <Text style={styles.smallLogoutText}>Complete Trip ⏩</Text>
                 </TouchableOpacity>
               )}
+              {currentRide.status === 'PAYMENT_PENDING' && (
+                <TouchableOpacity
+                  style={[styles.smallLogoutBtn, { backgroundColor: '#27ae60' }]}
+                  onPress={() => setCurrentRide((prev) => (prev ? { ...prev, status: 'COMPLETED' } : null))}
+                >
+                  <Text style={styles.smallLogoutText}>Confirm Cash (Captain) ⏩</Text>
+                </TouchableOpacity>
+              )}
             </View>
           </View>
 
-          {currentRide.status === 'PAYMENT_PENDING' && (
+          {currentRide.status === 'COMPLETED' && (
             <TouchableOpacity style={[styles.button, { marginTop: 14 }]} onPress={() => setStep('BOOKING')}>
               <Text style={styles.buttonText}>Book Another Ride</Text>
             </TouchableOpacity>

@@ -153,6 +153,14 @@ describe('DriversService', () => {
         userId: 'user-d1',
       });
 
+      mockPrisma.driverLocation.create.mockResolvedValueOnce({
+        id: 'loc-1',
+        accuracy: null,
+        heading: null,
+        speed: null,
+        recordedAt: new Date(),
+      });
+
       mockPrisma.driverProfile.update.mockResolvedValueOnce({
         id: 'driver-prof-1',
         currentLatitude: 16.9891,
@@ -169,10 +177,13 @@ describe('DriversService', () => {
 
       expect(result.latitude).toBe(16.9891);
       expect(result.longitude).toBe(82.2475);
-      expect(mockRealtime.notifyDriverLocationUpdated).toHaveBeenCalledWith('assigned-ride-1', {
-        latitude: 16.9891,
-        longitude: 82.2475,
-      });
+      expect(mockRealtime.notifyDriverLocationUpdated).toHaveBeenCalledWith(
+        'assigned-ride-1',
+        expect.objectContaining({
+          latitude: 16.9891,
+          longitude: 82.2475,
+        }),
+      );
     });
   });
 

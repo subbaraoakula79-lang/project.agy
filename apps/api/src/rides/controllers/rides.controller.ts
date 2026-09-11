@@ -13,13 +13,17 @@ import { CurrentUser } from '../../auth/decorators/current-user.decorator';
 import { Roles } from '../../auth/decorators/roles.decorator';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../../auth/guards/roles.guard';
+import { DriversService } from '../../drivers/services/drivers.service';
 import { CreateRideDto } from '../dto/create-ride.dto';
 import { FareEstimateQueryDto } from '../dto/fare-estimate-query.dto';
 import { RideRecord, RidesService } from '../services/rides.service';
 
 @Controller('rides')
 export class RidesController {
-  constructor(private readonly ridesService: RidesService) {}
+  constructor(
+    private readonly ridesService: RidesService,
+    private readonly driversService: DriversService,
+  ) {}
 
   /** GET /rides/locations — Get Kakinada mock locations for autocomplete. */
   @Get('locations')
@@ -84,6 +88,18 @@ export class RidesController {
     @Body('reason') reason?: string,
   ): Promise<ApiResponse<RideRecord>> {
     const data = await this.ridesService.cancelRiderRide(userId, rideId, reason);
+    return { success: true, data };
+  }
+
+  /** GET /rides/:id/driver-location — Get assigned driver's latest location with freshness (Enforces ownership). */
+  @Get(':id/driver-location')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  async getDriverLocation(
+    @Param('id') rideId: string,
+    @CurrentUser('userId') userId: string,
+    @CurrentUser('role') role: UserRole,
+  ): Promise<ApiResponse> {
+    const data = await this.driversService.getDriverLocationForRide(rideId, userId, role);
     return { success: true, data };
   }
 

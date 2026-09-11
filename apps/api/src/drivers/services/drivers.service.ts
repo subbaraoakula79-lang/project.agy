@@ -210,14 +210,46 @@ export class DriversService {
   async updateLocation(userId: string, dto: UpdateLocationDto) {
     const profile = await this.getDriverProfileByUserId(userId);
     const now = new Date();
+    const recordedAt = dto.timestamp ? new Date(dto.timestamp) : now;
+
+    // Deduplication check: ignore tiny movement (< 2 meters) recorded within 5 seconds
+    if (
+      profile.currentLatitude != null &&
+      profile.currentLongitude != null &&
+      profile.lastLocationAt != null
+    ) {
+      const dist = this.haversineMeters(
+        profile.currentLatitude,
+        profile.currentLongitude,
+        dto.latitude,
+        dto.longitude,
+      );
+      const timeDiffSec = (now.getTime() - profile.lastLocationAt.getTime()) / 1000;
+      if (dist < 2.0 && timeDiffSec < 5.0) {
+        // Skip duplicate write
+        return {
+          latitude: profile.currentLatitude,
+          longitude: profile.currentLongitude,
+          accuracy: dto.accuracy ?? null,
+          heading: dto.heading ?? null,
+          speed: dto.speed ?? null,
+          lastLocationAt: profile.lastLocationAt,
+          freshness: this.calculateFreshness(profile.lastLocationAt),
+        };
+      }
+    }
 
     // Persist location history and update current coordinates in a transaction
-    const [_, updatedProfile] = await this.prisma.$transaction([
+    const [driverLoc, updatedProfile] = await this.prisma.$transaction([
       this.prisma.driverLocation.create({
         data: {
           driverProfileId: profile.id,
           latitude: dto.latitude,
           longitude: dto.longitude,
+          accuracy: dto.accuracy ?? null,
+          heading: dto.heading ?? null,
+          speed: dto.speed ?? null,
+          recordedAt: recordedAt,
         },
       }),
       this.prisma.driverProfile.update({
@@ -235,24 +267,129 @@ export class DriversService {
       where: {
         driverProfileId: profile.id,
         status: {
-          in: ['DRIVER_ASSIGNED', 'DRIVER_EN_ROUTE', 'DRIVER_ARRIVING', 'DRIVER_ARRIVED', 'RIDE_IN_PROGRESS', 'RIDE_STARTED'],
+          in: [
+            'DRIVER_ASSIGNED',
+            'DRIVER_EN_ROUTE',
+            'DRIVER_ARRIVING',
+            'DRIVER_ARRIVED',
+            'RIDE_IN_PROGRESS',
+            'RIDE_STARTED',
+            'PAYMENT_PENDING',
+          ],
         },
       },
-      select: { id: true },
+      select: { id: true, riderId: true },
     });
 
     if (activeRide) {
-      this.realtimeService.notifyDriverLocationUpdated(activeRide.id, {
+      this.realtimeService?.notifyDriverLocationUpdated(activeRide.id, {
         latitude: dto.latitude,
         longitude: dto.longitude,
+        accuracy: dto.accuracy,
+        heading: dto.heading,
+        speed: dto.speed,
+        recordedAt: recordedAt.toISOString(),
       });
     }
 
     return {
       latitude: updatedProfile.currentLatitude,
       longitude: updatedProfile.currentLongitude,
+      accuracy: driverLoc.accuracy,
+      heading: driverLoc.heading,
+      speed: driverLoc.speed,
       lastLocationAt: updatedProfile.lastLocationAt,
+      freshness: 'FRESH',
     };
+  }
+
+  /**
+   * Get latest driver location for an active ride with strict RBAC & ownership check.
+   */
+  async getDriverLocationForRide(
+    rideId: string,
+    requestingUserId: string,
+    userRole: UserRole,
+  ) {
+    const ride = await this.prisma.ride.findUnique({
+      where: { id: rideId },
+      include: { driverProfile: true },
+    });
+
+    if (!ride) {
+      throw new NotFoundException(`Ride with ID ${rideId} not found`);
+    }
+
+    // Ownership check for Rider
+    if (userRole === UserRole.RIDER && ride.riderId !== requestingUserId) {
+      throw new ForbiddenException('Access denied: You can only view driver location for your own ride');
+    }
+
+    // Ownership check for Driver
+    if (userRole === UserRole.DRIVER) {
+      const driverProfile = await this.getDriverProfileByUserId(requestingUserId);
+      if (ride.driverProfileId !== driverProfile.id) {
+        throw new ForbiddenException('Access denied: You are not the assigned driver for this ride');
+      }
+    }
+
+    if (!ride.driverProfileId || !ride.driverProfile) {
+      return {
+        driverProfileId: null,
+        latitude: null,
+        longitude: null,
+        accuracy: null,
+        heading: null,
+        speed: null,
+        freshness: 'UNAVAILABLE' as const,
+        recordedAt: null,
+        receivedAt: new Date().toISOString(),
+      };
+    }
+
+    const latestLocation = await this.prisma.driverLocation.findFirst({
+      where: { driverProfileId: ride.driverProfileId },
+      orderBy: { recordedAt: 'desc' },
+    });
+
+    const lat = latestLocation?.latitude ?? ride.driverProfile.currentLatitude;
+    const lng = latestLocation?.longitude ?? ride.driverProfile.currentLongitude;
+    const lastTime = latestLocation?.recordedAt ?? ride.driverProfile.lastLocationAt;
+    const staleThreshold = parseInt(process.env.LOCATION_STALE_AFTER_SECONDS || '30', 10);
+    const freshness = this.calculateFreshness(lastTime, staleThreshold);
+
+    return {
+      driverProfileId: ride.driverProfileId,
+      latitude: lat,
+      longitude: lng,
+      accuracy: latestLocation?.accuracy ?? null,
+      heading: latestLocation?.heading ?? null,
+      speed: latestLocation?.speed ?? null,
+      freshness,
+      recordedAt: lastTime?.toISOString() ?? null,
+      receivedAt: new Date().toISOString(),
+    };
+  }
+
+  calculateFreshness(lastLocationAt: Date | null, staleThresholdSeconds = 30): 'FRESH' | 'STALE' | 'UNAVAILABLE' {
+    if (!lastLocationAt) {
+      return 'UNAVAILABLE';
+    }
+    const ageSeconds = (Date.now() - lastLocationAt.getTime()) / 1000;
+    return ageSeconds <= staleThresholdSeconds ? 'FRESH' : 'STALE';
+  }
+
+  private haversineMeters(lat1: number, lon1: number, lat2: number, lon2: number): number {
+    const R = 6371000;
+    const dLat = ((lat2 - lat1) * Math.PI) / 180;
+    const dLon = ((lon2 - lon1) * Math.PI) / 180;
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos((lat1 * Math.PI) / 180) *
+        Math.cos((lat2 * Math.PI) / 180) *
+        Math.sin(dLon / 2) *
+        Math.sin(dLon / 2);
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   }
 
   /**

@@ -1,0 +1,508 @@
+﻿node.exe : PASS src/fare/fa
+re.service.spec.ts
+At line:1 char:1
++ & "C:\Program 
+Files\nodejs/node.exe" 
+"C:\Program 
+Files\nodejs/node_mo ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~
+    + CategoryInfo         
+     : NotSpecified: (PAS  
+  S src/fare/fare.servic   
+ e.spec.ts:String) [],     
+RemoteException
+    + FullyQualifiedErrorI 
+   d : NativeCommandError
+ 
+PASS src/drivers/services/d
+river-matching.service.spec
+.ts
+  ΓùÅ Console
+
+    console.log
+      ≡ƒ¢ú∩╕Å 
+[MockRouting] Route: 5.49 
+km, 13 min
+
+      at MockRoutingService
+.getRoute (src/providers/mo
+ck/mock-map.service.ts:114:
+13)
+
+    console.log
+      ≡ƒ¢ú∩╕Å 
+[MockRouting] Route: 1.76 
+km, 4 min
+
+      at MockRoutingService
+.getRoute (src/providers/mo
+ck/mock-map.service.ts:114:
+13)
+
+    console.log
+      ≡ƒ¢ú∩╕Å 
+[MockRouting] Route: 54.39 
+km, 131 min
+
+      at MockRoutingService
+.getRoute (src/providers/mo
+ck/mock-map.service.ts:114:
+13)
+
+    console.log
+      ≡ƒ¢ú∩╕Å 
+[MockRouting] Route: 1.76 
+km, 4 min
+
+      at MockRoutingService
+.getRoute (src/providers/mo
+ck/mock-map.service.ts:114:
+13)
+
+[32m[Nest] 2764  - [39m11/09/2026, 11:10:34 am [32m    LOG[39m [38;5;3m[DriverMatchingService] [39m[32mFound 2 candidate drivers for vehicle BIKE in city kakinada-city[39m
+[32m[Nest] 2764  - [39m11/09/2026, 11:10:34 am [32m    LOG[39m [38;5;3m[DriverMatchingService] [39m[32mFound 1 candidate drivers for vehicle CAB in city kakinada-city[39m
+[32m[Nest] 2764  - [39m11/09/2026, 11:10:34 am [32m    LOG[39m [38;5;3m[DriverMatchingService] [39m[32mFound 1 candidate drivers for vehicle AUTO in city kakinada-city[39m
+PASS src/auth/guards/roles.
+guard.spec.ts
+PASS src/providers/mock/moc
+k-otp.service.spec.ts
+  ΓùÅ Console
+
+    console.log
+      ≡ƒô▒ [MockOTP] Sent 
+OTP to +919000000001 ΓÇö 
+use code: 123456
+
+      at 
+MockOtpService.sendOtp (src
+/providers/mock/mock-otp.se
+rvice.ts:28:13)
+
+    console.log
+      ≡ƒô▒ [MockOTP] 
+Session: mock-session-17891
+05235210-u2eteskhq6
+
+      at 
+MockOtpService.sendOtp (src
+/providers/mock/mock-otp.se
+rvice.ts:29:13)
+
+    console.log
+      ≡ƒô▒ [MockOTP] Sent 
+OTP to +919000000001 ΓÇö 
+use code: 123456
+
+      at 
+MockOtpService.sendOtp (src
+/providers/mock/mock-otp.se
+rvice.ts:28:13)
+
+    console.log
+      ≡ƒô▒ [MockOTP] 
+Session: mock-session-17891
+05235225-uo43tep8kb
+
+      at 
+MockOtpService.sendOtp (src
+/providers/mock/mock-otp.se
+rvice.ts:29:13)
+
+    console.log
+      ≡ƒô▒ [MockOTP] 
+Verify 123456 for 
++919000000001: Γ£à
+
+      at 
+MockOtpService.verifyOtp (s
+rc/providers/mock/mock-otp.
+service.ts:49:13)
+
+    console.log
+      ≡ƒô▒ [MockOTP] Sent 
+OTP to +919000000001 ΓÇö 
+use code: 123456
+
+      at 
+MockOtpService.sendOtp (src
+/providers/mock/mock-otp.se
+rvice.ts:28:13)
+
+    console.log
+      ≡ƒô▒ [MockOTP] 
+Session: mock-session-17891
+05235228-s23kuid1bsa
+
+      at 
+MockOtpService.sendOtp (src
+/providers/mock/mock-otp.se
+rvice.ts:29:13)
+
+    console.log
+      ≡ƒô▒ [MockOTP] 
+Verify 000000 for 
++919000000001: Γ¥î
+
+      at 
+MockOtpService.verifyOtp (s
+rc/providers/mock/mock-otp.
+service.ts:49:13)
+
+    console.log
+      ≡ƒô▒ [MockOTP] Sent 
+OTP to +919000000001 ΓÇö 
+use code: 123456
+
+      at 
+MockOtpService.sendOtp (src
+/providers/mock/mock-otp.se
+rvice.ts:28:13)
+
+    console.log
+      ≡ƒô▒ [MockOTP] 
+Session: mock-session-17891
+05235230-t0gz3kik5y
+
+      at 
+MockOtpService.sendOtp (src
+/providers/mock/mock-otp.se
+rvice.ts:29:13)
+
+    console.log
+      ≡ƒô▒ [MockOTP] 
+Verify 123456 for 
++919000000001: Γ£à
+
+      at 
+MockOtpService.verifyOtp (s
+rc/providers/mock/mock-otp.
+service.ts:49:13)
+
+    console.log
+      ≡ƒô▒ [MockOTP] 
+Session not found: mock-ses
+sion-1789105235230-t0gz3kik
+5y
+
+      at 
+MockOtpService.verifyOtp (s
+rc/providers/mock/mock-otp.
+service.ts:38:15)
+
+    console.log
+      ≡ƒô▒ [MockOTP] 
+Session not found: 
+nonexistent
+
+      at 
+MockOtpService.verifyOtp (s
+rc/providers/mock/mock-otp.
+service.ts:38:15)
+
+PASS src/auth/services/auth
+.service.spec.ts
+  ΓùÅ Console
+
+    console.log
+      ≡ƒô▒ [MockOTP] Sent 
+OTP to +919000000001 ΓÇö 
+use code: 123456
+
+      at 
+MockOtpService.sendOtp (src
+/providers/mock/mock-otp.se
+rvice.ts:28:13)
+
+    console.log
+      ≡ƒô▒ [MockOTP] 
+Session: mock-session-17891
+05235049-yl05huupj4
+
+      at 
+MockOtpService.sendOtp (src
+/providers/mock/mock-otp.se
+rvice.ts:29:13)
+
+    console.log
+      ≡ƒô▒ [MockOTP] Sent 
+OTP to +919000000001 ΓÇö 
+use code: 123456
+
+      at 
+MockOtpService.sendOtp (src
+/providers/mock/mock-otp.se
+rvice.ts:28:13)
+
+    console.log
+      ≡ƒô▒ [MockOTP] 
+Session: mock-session-17891
+05235093-pnpy5lavrtq
+
+      at 
+MockOtpService.sendOtp (src
+/providers/mock/mock-otp.se
+rvice.ts:29:13)
+
+    console.log
+      ≡ƒô▒ [MockOTP] 
+Verify 123456 for 
++919000000001: Γ£à
+
+      at 
+MockOtpService.verifyOtp (s
+rc/providers/mock/mock-otp.
+service.ts:49:13)
+
+    console.log
+      ≡ƒô▒ [MockOTP] Sent 
+OTP to +919000000001 ΓÇö 
+use code: 123456
+
+      at 
+MockOtpService.sendOtp (src
+/providers/mock/mock-otp.se
+rvice.ts:28:13)
+
+    console.log
+      ≡ƒô▒ [MockOTP] 
+Session: mock-session-17891
+05235101-pwl3s8mc61h
+
+      at 
+MockOtpService.sendOtp (src
+/providers/mock/mock-otp.se
+rvice.ts:29:13)
+
+    console.log
+      ≡ƒô▒ [MockOTP] 
+Verify 000000 for 
++919000000001: Γ¥î
+
+      at 
+MockOtpService.verifyOtp (s
+rc/providers/mock/mock-otp.
+service.ts:49:13)
+
+    console.log
+      ≡ƒô▒ [MockOTP] Sent 
+OTP to +918000000001 ΓÇö 
+use code: 123456
+
+      at 
+MockOtpService.sendOtp (src
+/providers/mock/mock-otp.se
+rvice.ts:28:13)
+
+    console.log
+      ≡ƒô▒ [MockOTP] 
+Session: mock-session-17891
+05235131-e38e0rc6wjr
+
+      at 
+MockOtpService.sendOtp (src
+/providers/mock/mock-otp.se
+rvice.ts:29:13)
+
+    console.log
+      ≡ƒô▒ [MockOTP] Sent 
+OTP to +918000000001 ΓÇö 
+use code: 123456
+
+      at 
+MockOtpService.sendOtp (src
+/providers/mock/mock-otp.se
+rvice.ts:28:13)
+
+    console.log
+      ≡ƒô▒ [MockOTP] 
+Session: mock-session-17891
+05235133-1pzbyl2o8rv
+
+      at 
+MockOtpService.sendOtp (src
+/providers/mock/mock-otp.se
+rvice.ts:29:13)
+
+    console.log
+      ≡ƒô▒ [MockOTP] 
+Verify 123456 for 
++918000000001: Γ£à
+
+      at 
+MockOtpService.verifyOtp (s
+rc/providers/mock/mock-otp.
+service.ts:49:13)
+
+    console.log
+      ≡ƒô▒ [MockOTP] Sent 
+OTP to +919000000001 ΓÇö 
+use code: 123456
+
+      at 
+MockOtpService.sendOtp (src
+/providers/mock/mock-otp.se
+rvice.ts:28:13)
+
+    console.log
+      ≡ƒô▒ [MockOTP] 
+Session: mock-session-17891
+05235136-p39qi8nxubf
+
+      at 
+MockOtpService.sendOtp (src
+/providers/mock/mock-otp.se
+rvice.ts:29:13)
+
+    console.log
+      ≡ƒô▒ [MockOTP] 
+Verify 123456 for 
++919000000001: Γ£à
+
+      at 
+MockOtpService.verifyOtp (s
+rc/providers/mock/mock-otp.
+service.ts:49:13)
+
+PASS src/payments/payments.
+service.spec.ts
+PASS src/realtime/realtime.
+service.spec.ts
+[33m[Nest] 2916  - [39m11/09/2026, 11:10:35 am [33m   WARN[39m [38;5;3m[PaymentStateMachineService] [39m[33mIllegal payment transition attempted: SUCCEEDED -> PENDING[39m
+[32m[Nest] 3924  - [39m11/09/2026, 11:10:35 am [32m    LOG[39m [38;5;3m[RidesService] [39m[32m≡ƒÜù [RidesService] Ride created in PostgreSQL: ride-ph4-1 (status: REQUESTED)[39m
+[32m[Nest] 3924  - [39m11/09/2026, 11:10:35 am [32m    LOG[39m [38;5;3m[RidesService] [39m[32m≡ƒÜù [RidesService] Offered ride ride-ph4-1 to driver driver-prof-1 (distance: 800m)[39m
+[33m[Nest] 10728  - [39m11/09/2026, 11:10:35 am [33m   WARN[39m [38;5;3m[RidesGateway] [39m[33m[WebSocket] Client rejected: Missing token (sock-1)[39m
+[32m[Nest] 10728  - [39m11/09/2026, 11:10:35 am [32m    LOG[39m [38;5;3m[RidesGateway] [39m[32m[WebSocket] Client connected: rider-123 (RIDER, sock-2)[39m
+PASS src/rides/services/rid
+es-phase4.spec.ts
+  ΓùÅ Console
+
+    console.log
+      ≡ƒ¢ú∩╕Å 
+[MockRouting] Route: 5.35 
+km, 13 min
+
+      at MockRoutingService
+.getRoute (src/providers/mo
+ck/mock-map.service.ts:114:
+13)
+
+    console.log
+      ≡ƒ¢ú∩╕Å 
+[MockRouting] Route: 5.35 
+km, 13 min
+
+      at MockRoutingService
+.getRoute (src/providers/mo
+ck/mock-map.service.ts:114:
+13)
+
+    console.log
+      ≡ƒ¢ú∩╕Å 
+[MockRouting] Route: 5.35 
+km, 13 min
+
+      at MockRoutingService
+.getRoute (src/providers/mo
+ck/mock-map.service.ts:114:
+13)
+
+PASS src/rides/services/rid
+es.service.spec.ts
+  ΓùÅ Console
+
+    console.log
+      ≡ƒ¢ú∩╕Å 
+[MockRouting] Route: 5.35 
+km, 13 min
+
+      at MockRoutingService
+.getRoute (src/providers/mo
+ck/mock-map.service.ts:114:
+13)
+
+    console.log
+      ≡ƒ¢ú∩╕Å 
+[MockRouting] Route: 5.35 
+km, 13 min
+
+      at MockRoutingService
+.getRoute (src/providers/mo
+ck/mock-map.service.ts:114:
+13)
+
+PASS src/health/health.cont
+roller.spec.ts
+PASS src/realtime/phase4-se
+curity-audit.spec.ts
+PASS src/drivers/services/d
+rivers.service.spec.ts
+[32m[Nest] 10728  - [39m11/09/2026, 11:10:35 am [32m    LOG[39m [38;5;3m[RidesGateway] [39m[32m[WebSocket] Client connected: driver-user-1 (DRIVER, sock-driver)[39m
+[32m[Nest] 11332  - [39m11/09/2026, 11:10:35 am [32m    LOG[39m [38;5;3m[DriversService] [39m[32mDriver driver-prof-1 is now ONLINE_AVAILABLE[39m
+[33m[Nest] 10728  - [39m11/09/2026, 11:10:35 am [33m   WARN[39m [38;5;3m[RidesGateway] [39m[33m[WebSocket] Unauthorized join:ride attempt by user intruder-rider (RIDER) for ride victim-ride-1[39m
+[33m[Nest] 10728  - [39m11/09/2026, 11:10:35 am [33m   WARN[39m [38;5;3m[RidesGateway] [39m[33m[WebSocket] Driver spoofing attempt blocked: user driver-user-1 attempted to join driver:victim-driver-prof-2[39m
+[32m[Nest] 3924  - [39m11/09/2026, 11:10:35 am [32m    LOG[39m [38;5;3m[RidesService] [39m[32m≡ƒÜù [RidesService] Ride created in PostgreSQL: ride-ph4-1 (status: REQUESTED)[39m
+[32m[Nest] 3924  - [39m11/09/2026, 11:10:35 am [32m    LOG[39m [38;5;3m[RidesService] [39m[32m≡ƒÜù [RidesService] Ride ride-ph4-1 cancelled: CANCELLED_NO_DRIVER[39m
+[32m[Nest] 18872  - [39m11/09/2026, 11:10:35 am [32m    LOG[39m [38;5;3m[RidesService] [39m[32m≡ƒÜù [RidesService] Ride created in PostgreSQL: mock-pg-ride-123 (status: REQUESTED)[39m
+[32m[Nest] 3924  - [39m11/09/2026, 11:10:35 am [32m    LOG[39m [38;5;3m[RidesService] [39m[32m≡ƒÜù [RidesService] Ride created in PostgreSQL: ride-ph4-1 (status: REQUESTED)[39m
+[32m[Nest] 3924  - [39m11/09/2026, 11:10:35 am [32m    LOG[39m [38;5;3m[RidesService] [39m[32m≡ƒÜù [RidesService] Ride ride-ph4-1 directly assigned to driver driver-prof-1[39m
+[32m[Nest] 3924  - [39m11/09/2026, 11:10:35 am [32m    LOG[39m [38;5;3m[RidesService] [39m[32mDriverRideRequest req-timeout-1 expired[39m
+[32m[Nest] 3924  - [39m11/09/2026, 11:10:35 am [32m    LOG[39m [38;5;3m[RidesService] [39m[32m≡ƒÜù [RidesService] Offered ride ride-ph4-timeout to driver driver-prof-2 (distance: 1400m)[39m
+[32m[Nest] 11332  - [39m11/09/2026, 11:10:35 am [32m    LOG[39m [38;5;3m[DriversService] [39m[32mDriver driver-prof-1 is now OFFLINE[39m
+[32m[Nest] 11332  - [39m11/09/2026, 11:10:35 am [32m    LOG[39m [38;5;3m[DriversService] [39m[32mDriver driver-prof-1 accepted ride ride-1[39m
+[32m[Nest] 11332  - [39m11/09/2026, 11:10:35 am [32m    LOG[39m [38;5;3m[DriversService] [39m[32mDriver driver-prof-1 rejected ride ride-1[39m
+[32m[Nest] 11332  - [39m11/09/2026, 11:10:35 am [32m    LOG[39m [38;5;3m[DriversService] [39m[32mOffered ride ride-1 to next candidate driver driver-prof-2[39m
+[32m[Nest] 11332  - [39m11/09/2026, 11:10:35 am [32m    LOG[39m [38;5;3m[DriversService] [39m[32mRide ride-empty cancelled: CANCELLED_NO_DRIVER[39m
+PASS src/payments/payments.
+concurrency.spec.ts
+PASS src/payments/payments.
+security.spec.ts
+PASS src/rides/controllers/
+rides.controller.spec.ts
+  ΓùÅ Console
+
+    console.log
+      ≡ƒù║∩╕Å [MockMap] 
+Search "" ΓåÆ 10 results
+
+      at MockMapService.sea
+rchPlaces (src/providers/mo
+ck/mock-map.service.ts:75:1
+3)
+
+    console.log
+      ≡ƒ¢ú∩╕Å 
+[MockRouting] Route: 5.35 
+km, 13 min
+
+      at MockRoutingService
+.getRoute (src/providers/mo
+ck/mock-map.service.ts:114:
+13)
+
+PASS src/drivers/controller
+s/drivers.controller.spec.t
+s
+[32m[Nest] 12584  - [39m11/09/2026, 11:10:36 am [32m    LOG[39m [38;5;3m[RidesService] [39m[32m≡ƒÜù [RidesService] Ride ride-1 cancelled by rider[39m
+PASS src/rides/services/rid
+es-phase5a.spec.ts
+[33m[Nest] 2916  - [39m11/09/2026, 11:10:36 am [33m   WARN[39m [38;5;3m[RideStateMachineService] [39m[33mIllegal transition attempted: DRIVER_ASSIGNED -> RIDE_STARTED[39m
+[33m[Nest] 2916  - [39m11/09/2026, 11:10:36 am [33m   WARN[39m [38;5;3m[RideStateMachineService] [39m[33mIllegal transition attempted: REQUESTED -> DRIVER_ARRIVED[39m
+[32m[Nest] 2916  - [39m11/09/2026, 11:10:36 am [32m    LOG[39m [38;5;3m[DriversService] [39m[32mDriver driver-prof-1 is now ARRIVING for ride ride-test-1[39m
+[32m[Nest] 2916  - [39m11/09/2026, 11:10:36 am [32m    LOG[39m [38;5;3m[DriversService] [39m[32mDriver driver-prof-1 ARRIVED for ride ride-test-1[39m
+[33m[Nest] 2916  - [39m11/09/2026, 11:10:36 am [33m   WARN[39m [38;5;3m[RideStateMachineService] [39m[33mIllegal transition attempted: DRIVER_ASSIGNED -> DRIVER_ARRIVED[39m
+[32m[Nest] 2916  - [39m11/09/2026, 11:10:36 am [32m    LOG[39m [38;5;3m[DriversService] [39m[32mRide ride-test-1 STARTED by driver driver-prof-1[39m
+[33m[Nest] 2916  - [39m11/09/2026, 11:10:36 am [33m   WARN[39m [38;5;3m[RideStateMachineService] [39m[33mIllegal transition attempted: DRIVER_ARRIVING -> RIDE_STARTED[39m
+[32m[Nest] 2916  - [39m11/09/2026, 11:10:36 am [32m    LOG[39m [38;5;3m[DriversService] [39m[32mRide ride-test-1 completed and marked PAYMENT_PENDING. Driver driver-prof-1 remains BUSY[39m
+[32m[Nest] 2916  - [39m11/09/2026, 11:10:36 am [32m    LOG[39m [38;5;3m[DriversService] [39m[32mRide ride-test-1 completed and marked PAYMENT_PENDING. Driver driver-prof-1 remains BUSY[39m
+[32m[Nest] 2916  - [39m11/09/2026, 11:10:36 am [32m    LOG[39m [38;5;3m[DriversService] [39m[32mRide ride-test-1 STARTED by driver driver-prof-1[39m
+[32m[Nest] 2916  - [39m11/09/2026, 11:10:36 am [32m    LOG[39m [38;5;3m[RidesService] [39m[32m≡ƒÜù [RidesService] Ride ride-1 cancelled by rider[39m
+
+Test Suites: 17 passed, 17 
+total
+Tests:       130 passed, 
+130 total
+Snapshots:   0 total
+Time:        4.534 s
+Ran all test suites.

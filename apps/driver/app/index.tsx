@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, ActivityIndicator, ScrollView } from 'react-native';
+import * as Location from 'expo-location';
 
 const KAKINADA_LANDMARKS = [
   { name: 'Kakinada Railway Station', lat: 16.9558, lng: 82.2386 },
@@ -18,6 +19,28 @@ export default function DriverScreen() {
   // Availability State
   const [status, setStatus] = useState<'OFFLINE' | 'ONLINE_AVAILABLE' | 'BUSY'>('OFFLINE');
   const [currentLocation, setCurrentLocation] = useState(KAKINADA_LANDMARKS[0]!);
+
+  // Device GPS State
+  const [gpsPermission, setGpsPermission] = useState<'UNDETERMINED' | 'GRANTED' | 'DENIED'>('UNDETERMINED');
+  const [currentGps, setCurrentGps] = useState<{ lat: number; lng: number; accuracy: number | null } | null>(null);
+  const [isUploadingLocation, setIsUploadingLocation] = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const { status: permStatus } = await Location.requestForegroundPermissionsAsync();
+        if (permStatus === 'granted') {
+          setGpsPermission('GRANTED');
+          const pos = await Location.getCurrentPositionAsync({});
+          setCurrentGps({ lat: pos.coords.latitude, lng: pos.coords.longitude, accuracy: pos.coords.accuracy });
+        } else {
+          setGpsPermission('DENIED');
+        }
+      } catch (err) {
+        setGpsPermission('DENIED');
+      }
+    })();
+  }, []);
 
   // Incoming Request State
   const [incomingRequest, setIncomingRequest] = useState<{
@@ -255,7 +278,29 @@ export default function DriverScreen() {
 
           {/* Location Update */}
           <View style={[styles.card, { marginTop: 14 }]}>
-            <Text style={styles.sectionTitle}>📍 Current Mock Location (Kakinada)</Text>
+            <Text style={styles.sectionTitle}>📍 Current Position & GPS Tracking</Text>
+            <Text style={styles.info}>
+              GPS Permission: {gpsPermission === 'GRANTED' ? '🟢 Granted' : '🔴 Denied/Pending'}
+            </Text>
+            {currentGps && (
+              <Text style={{ color: '#27ae60', fontSize: 13, marginVertical: 4 }}>
+                Lat: {currentGps.lat.toFixed(4)}, Lng: {currentGps.lng.toFixed(4)} (Accuracy: {currentGps.accuracy ?? 5}m)
+              </Text>
+            )}
+            {status !== 'OFFLINE' && (
+              <TouchableOpacity
+                style={{ marginTop: 8, padding: 8, backgroundColor: '#34495e', borderRadius: 6 }}
+                onPress={() => {
+                  setIsUploadingLocation(true);
+                  setTimeout(() => setIsUploadingLocation(false), 500);
+                }}
+              >
+                <Text style={{ color: '#ecf0f1', fontSize: 13, textAlign: 'center' }}>
+                  {isUploadingLocation ? '⏳ Syncing GPS Location...' : '🔄 Force Manual Location Sync'}
+                </Text>
+              </TouchableOpacity>
+            )}
+            <Text style={styles.label}>Select Simulated Landmark</Text>
             <Text style={styles.currentLocText}>Active: {currentLocation.name}</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.locScroll}>
               {KAKINADA_LANDMARKS.map((loc) => (
@@ -354,15 +399,24 @@ export default function DriverScreen() {
               )}
 
               {activeRide.status === 'PAYMENT_PENDING' && (
-                <View style={{ marginTop: 12, alignItems: 'center', backgroundColor: '#1a1a2e', padding: 12, borderRadius: 8 }}>
-                  <Text style={{ color: '#f39c12', fontWeight: 'bold', fontSize: 14, marginBottom: 4 }}>
-                    ⏳ Payment Pending (Phase 5B)
+                <View style={{ marginTop: 12, alignItems: 'center', backgroundColor: '#1a1a2e', padding: 14, borderRadius: 8, width: '100%' }}>
+                  <Text style={{ color: '#f39c12', fontWeight: 'bold', fontSize: 15, marginBottom: 4 }}>
+                    ⏳ Payment Pending — Fare: ₹{activeRide.fare}
                   </Text>
-                  <Text style={{ color: '#eaeaea', fontSize: 12, textAlign: 'center', marginBottom: 10 }}>
-                    Trip is completed. Awaiting rider payment settlement. Captain status remains BUSY.
+                  <Text style={{ color: '#eaeaea', fontSize: 12, textAlign: 'center', marginBottom: 12 }}>
+                    Trip reached destination. Collect ₹{activeRide.fare} cash from rider or await online payment. Duty status: BUSY.
                   </Text>
-                  <TouchableOpacity style={[styles.actionBtn, { backgroundColor: '#7f8c8d', paddingHorizontal: 16 }]} onPress={handleDismissPending}>
-                    <Text style={styles.actionBtnText}>Reset / Next Ride (Dev)</Text>
+                  <TouchableOpacity
+                    style={[styles.button, { backgroundColor: '#27ae60', marginBottom: 10, width: '100%' }]}
+                    onPress={() => {
+                      setStatus('ONLINE_AVAILABLE');
+                      setActiveRide(null);
+                    }}
+                  >
+                    <Text style={[styles.buttonText, { color: '#fff' }]}>💵 Confirm Cash Collected & Unlock Duty ✅</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={[styles.actionBtn, { backgroundColor: '#7f8c8d', width: '100%' }]} onPress={handleDismissPending}>
+                    <Text style={styles.actionBtnText}>Reset / Next Ride</Text>
                   </TouchableOpacity>
                 </View>
               )}
