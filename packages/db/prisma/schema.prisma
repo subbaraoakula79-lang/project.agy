@@ -1,8 +1,8 @@
 // ================================================================
 // YatraSeva — Prisma Schema
 // ================================================================
-// Using SQLite for development. Switch datasource to PostgreSQL
-// for staging/production by changing the provider and url.
+// Using PostgreSQL (Neon) for all environments.
+// DATABASE_URL must be a server-side environment variable.
 // ================================================================
 
 generator client {
@@ -34,6 +34,7 @@ model User {
   riderProfile  RiderProfile?
   driverProfile DriverProfile?
   notifications Notification[]
+  deviceTokens  DeviceToken[]
   ridesAsRider  Ride[]    @relation("RiderRides")
   payments      Payment[] @relation("RiderPayments")
   ratingsGiven  Rating[]  @relation("RaterRatings")
@@ -266,22 +267,6 @@ model Rating {
   @@index([rateeId])
 }
 
-// ────────────────────────────────────────────────────────────────
-// NOTIFICATIONS
-// ────────────────────────────────────────────────────────────────
-
-model Notification {
-  id          String   @id @default(uuid())
-  userId      String
-  user        User     @relation(fields: [userId], references: [id])
-  title       String
-  body        String
-  data        String?  // JSON string for additional payload
-  isRead      Boolean  @default(false)
-  createdAt   DateTime @default(now())
-
-  @@index([userId, isRead])
-}
 
 // ────────────────────────────────────────────────────────────────
 // CITY & PRICING
@@ -367,3 +352,82 @@ model DriverRideRequest {
   @@index([driverProfileId, status])
   @@index([rideId, status])
 }
+
+// ────────────────────────────────────────────────────────────────
+// NOTIFICATION & DEVICE TOKENS (PHASE 7A)
+// ────────────────────────────────────────────────────────────────
+
+enum NotificationType {
+  RIDE_REQUESTED
+  DRIVER_ASSIGNED
+  DRIVER_ARRIVING
+  DRIVER_ARRIVED
+  RIDE_STARTED
+  PAYMENT_PENDING
+  PAYMENT_FAILED
+  PAYMENT_COMPLETED
+  RIDE_COMPLETED
+  RIDE_CANCELLED
+  DRIVER_RIDE_REQUEST
+  RIDER_CANCELLED
+}
+
+enum NotificationStatus {
+  PENDING
+  SENT
+  DELIVERED
+  FAILED
+  READ
+}
+
+enum NotificationChannel {
+  PUSH
+  IN_APP
+  SMS
+}
+
+enum DevicePlatform {
+  ANDROID
+  IOS
+  WEB
+}
+
+model DeviceToken {
+  id          String         @id @default(uuid())
+  userId      String
+  user        User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token       String
+  platform    DevicePlatform @default(ANDROID)
+  appRole     String         // RIDER, DRIVER, ADMIN
+  isActive    Boolean        @default(true)
+  lastSeenAt  DateTime       @default(now())
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  @@unique([userId, token])
+  @@index([userId, isActive])
+  @@index([token])
+}
+
+model Notification {
+  id            String              @id @default(uuid())
+  userId        String
+  user          User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type          NotificationType
+  title         String
+  body          String
+  data          Json?
+  channel       NotificationChannel @default(PUSH)
+  status        NotificationStatus  @default(PENDING)
+  failureReason String?
+  retryCount    Int                 @default(0)
+  sentAt        DateTime?
+  readAt        DateTime?
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+
+  @@index([userId, status])
+  @@index([userId, createdAt])
+  @@index([userId, readAt])
+}
+

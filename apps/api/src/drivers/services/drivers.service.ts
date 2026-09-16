@@ -7,10 +7,11 @@ import {
   NotFoundException,
   Optional,
 } from '@nestjs/common';
-import { DriverAvailabilityDto, DriverStatus, UserRole } from '@yatra-seva/shared-types';
+import { DriverAvailabilityDto, DriverStatus, NotificationType, UserRole } from '@yatra-seva/shared-types';
 import { PrismaService } from '../../database/prisma.service';
 import { RealtimeService } from '../../realtime/realtime.service';
 import { RideStateMachineService } from '../../rides/services/ride-state-machine.service';
+import { NotificationsService } from '../../notifications/notifications.service';
 import { UpdateLocationDto } from '../dto/update-location.dto';
 import { DriverMatchingService } from './driver-matching.service';
 
@@ -24,6 +25,7 @@ export class DriversService {
     private readonly realtimeService: RealtimeService,
     private readonly matchingService: DriverMatchingService,
     @Optional() stateMachine?: RideStateMachineService,
+    @Optional() private readonly notificationsService?: NotificationsService,
   ) {
     this.stateMachine = stateMachine ?? new RideStateMachineService();
   }
@@ -512,6 +514,16 @@ export class DriversService {
       },
     });
 
+    if (this.notificationsService) {
+      this.notificationsService.createAndSendNotification({
+        userId: result.riderId,
+        type: NotificationType.DRIVER_ASSIGNED,
+        title: 'Captain Assigned',
+        body: 'Your driver has accepted the ride and is on the way!',
+        data: { rideId, driverProfileId: profile.id },
+      }).catch((err) => this.logger.error(`Notification failed: ${err.message}`));
+    }
+
     this.logger.log(`Driver ${profile.id} accepted ride ${rideId}`);
     return result;
   }
@@ -733,6 +745,16 @@ export class DriversService {
       status: 'DRIVER_ARRIVING',
     });
 
+    if (this.notificationsService) {
+      this.notificationsService.createAndSendNotification({
+        userId: ride.riderId,
+        type: NotificationType.DRIVER_ARRIVING,
+        title: 'Captain Arriving',
+        body: 'Your captain is approaching the pickup location.',
+        data: { rideId: ride.id },
+      }).catch((err) => this.logger.error(`Notification failed: ${err.message}`));
+    }
+
     this.logger.log(`Driver ${profile.id} is now ARRIVING for ride ${rideId}`);
     return this.getRideDetails(rideId);
   }
@@ -788,6 +810,16 @@ export class DriversService {
       status: 'DRIVER_ARRIVED',
     });
 
+    if (this.notificationsService) {
+      this.notificationsService.createAndSendNotification({
+        userId: ride.riderId,
+        type: NotificationType.DRIVER_ARRIVED,
+        title: 'Captain Arrived',
+        body: 'Your captain has arrived at the pickup point.',
+        data: { rideId: ride.id },
+      }).catch((err) => this.logger.error(`Notification failed: ${err.message}`));
+    }
+
     this.logger.log(`Driver ${profile.id} ARRIVED for ride ${rideId}`);
     return this.getRideDetails(rideId);
   }
@@ -842,6 +874,16 @@ export class DriversService {
       rideId: ride.id,
       status: 'RIDE_STARTED',
     });
+
+    if (this.notificationsService) {
+      this.notificationsService.createAndSendNotification({
+        userId: ride.riderId,
+        type: NotificationType.RIDE_STARTED,
+        title: 'Trip Started',
+        body: 'Your trip has started. Have a safe ride!',
+        data: { rideId: ride.id },
+      }).catch((err) => this.logger.error(`Notification failed: ${err.message}`));
+    }
 
     this.logger.log(`Ride ${rideId} STARTED by driver ${profile.id}`);
     return this.getRideDetails(rideId);
@@ -909,6 +951,16 @@ export class DriversService {
       rideId: ride.id,
       status: 'PAYMENT_PENDING',
     });
+
+    if (this.notificationsService) {
+      this.notificationsService.createAndSendNotification({
+        userId: ride.riderId,
+        type: NotificationType.RIDE_COMPLETED,
+        title: 'Trip Completed',
+        body: 'You have reached your destination. Please complete payment.',
+        data: { rideId: ride.id },
+      }).catch((err) => this.logger.error(`Notification failed: ${err.message}`));
+    }
 
     this.logger.log(`Ride ${rideId} completed and marked PAYMENT_PENDING. Driver ${profile.id} remains BUSY`);
     return this.getRideDetails(rideId);

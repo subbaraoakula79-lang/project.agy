@@ -5,12 +5,13 @@ import {
   NotFoundException,
   Optional,
 } from '@nestjs/common';
-import { Address, DriverStatus, FareEstimate, RideStatus, UserRole, VehicleType } from '@yatra-seva/shared-types';
+import { Address, DriverStatus, FareEstimate, NotificationType, RideStatus, UserRole, VehicleType } from '@yatra-seva/shared-types';
 import { PrismaService } from '../../database/prisma.service';
 import { DriverMatchingService } from '../../drivers/services/driver-matching.service';
 import { FareService } from '../../fare/fare.service';
 import { MockMapService, MockRoutingService } from '../../providers/mock/mock-map.service';
 import { RealtimeService } from '../../realtime/realtime.service';
+import { NotificationsService } from '../../notifications/notifications.service';
 import { CreateRideDto } from '../dto/create-ride.dto';
 import { FareEstimateQueryDto } from '../dto/fare-estimate-query.dto';
 import { RideStateMachineService } from './ride-state-machine.service';
@@ -70,6 +71,7 @@ export class RidesService {
     @Optional() private readonly matchingService?: DriverMatchingService,
     @Optional() private readonly realtimeService?: RealtimeService,
     @Optional() stateMachine?: RideStateMachineService,
+    @Optional() private readonly notificationsService?: NotificationsService,
   ) {
     this.stateMachine = stateMachine ?? new RideStateMachineService();
   }
@@ -147,6 +149,16 @@ export class RidesService {
     });
 
     this.logger.log(`🚗 [RidesService] Ride created in PostgreSQL: ${created.id} (status: ${created.status})`);
+
+    if (this.notificationsService) {
+      this.notificationsService.createAndSendNotification({
+        userId: riderId,
+        type: NotificationType.RIDE_REQUESTED,
+        title: 'Ride Requested',
+        body: 'Searching for nearby drivers for your trip.',
+        data: { rideId: created.id },
+      }).catch((err) => this.logger.error(`Notification failed: ${err.message}`));
+    }
 
     // 2. Phase 4 matching lifecycle
     if (this.matchingService && options?.autoMatch !== false) {
@@ -524,6 +536,16 @@ export class RidesService {
     this.realtimeService?.notifyRideStatusChanged(rideId, riderId, RideStatus.CANCELLED_BY_RIDER, {
       reason: reason || 'Cancelled by rider',
     });
+
+    if (this.notificationsService) {
+      this.notificationsService.createAndSendNotification({
+        userId: riderId,
+        type: NotificationType.RIDE_CANCELLED,
+        title: 'Ride Cancelled',
+        body: 'Your ride request has been cancelled.',
+        data: { rideId, reason: reason || 'Cancelled by rider' },
+      }).catch((err) => this.logger.error(`Notification failed: ${err.message}`));
+    }
 
     this.logger.log(`🚗 [RidesService] Ride ${rideId} cancelled by rider`);
     return this.mapPrismaRideToRecord(updated);

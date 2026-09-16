@@ -7,10 +7,11 @@ import {
   NotFoundException,
   Optional,
 } from '@nestjs/common';
-import { DriverStatus, PaymentMethod, PaymentStatus, RideStatus, UserRole } from '@yatra-seva/shared-types';
+import { DriverStatus, NotificationType, PaymentMethod, PaymentStatus, RideStatus, UserRole } from '@yatra-seva/shared-types';
 import { PrismaService } from '../database/prisma.service';
 import { RealtimeService } from '../realtime/realtime.service';
 import { RideStateMachineService } from '../rides/services/ride-state-machine.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { PaymentStateMachineService } from './payment-state-machine.service';
 import { MockPaymentProvider } from './providers/mock-payment.provider';
 
@@ -24,6 +25,7 @@ export class PaymentsService {
     private readonly paymentStateMachine: PaymentStateMachineService,
     @Optional() private readonly realtimeService?: RealtimeService,
     @Optional() private readonly rideStateMachine?: RideStateMachineService,
+    @Optional() private readonly notificationsService?: NotificationsService,
   ) {}
 
   /**
@@ -306,6 +308,16 @@ export class PaymentsService {
       rideStatus: RideStatus.COMPLETED,
     });
 
+    if (this.notificationsService) {
+      this.notificationsService.createAndSendNotification({
+        userId: ride.riderId,
+        type: NotificationType.PAYMENT_COMPLETED,
+        title: 'Payment Received',
+        body: `Cash payment of ₹${amount} confirmed for your trip. Thank you for riding!`,
+        data: { rideId: ride.id, paymentId: result.id, amount },
+      }).catch((err) => this.logger.error(`Failed to send cash payment notification: ${err.message}`));
+    }
+
     this.logger.log(`💵 [PaymentsService] CASH payment confirmed for ride ${rideId}. Ride COMPLETED, driver ${ride.driverProfileId} unlocked.`);
     return result;
   }
@@ -369,6 +381,16 @@ export class PaymentsService {
         reason: failedPayment.failureReason,
       });
 
+      if (this.notificationsService) {
+        this.notificationsService.createAndSendNotification({
+          userId: riderUserId,
+          type: NotificationType.PAYMENT_FAILED,
+          title: 'Payment Failed',
+          body: `UPI Payment failed: ${failedPayment.failureReason}`,
+          data: { rideId: ride.id, paymentId: failedPayment.id },
+        }).catch((err) => this.logger.error(`Failed to send payment failure notification: ${err.message}`));
+      }
+
       return failedPayment;
     }
 
@@ -411,6 +433,16 @@ export class PaymentsService {
       paymentStatus: PaymentStatus.SUCCEEDED,
       rideStatus: RideStatus.COMPLETED,
     });
+
+    if (this.notificationsService) {
+      this.notificationsService.createAndSendNotification({
+        userId: riderUserId,
+        type: NotificationType.PAYMENT_COMPLETED,
+        title: 'Payment Successful',
+        body: `UPI payment of ₹${result.amount} succeeded for your trip. Thank you!`,
+        data: { rideId: ride.id, paymentId: result.id, amount: result.amount },
+      }).catch((err) => this.logger.error(`Failed to send UPI payment success notification: ${err.message}`));
+    }
 
     this.logger.log(`📱 [PaymentsService] Mock UPI payment SUCCEEDED for ride ${rideId}. Ride COMPLETED, driver ${ride.driverProfileId} unlocked.`);
     return result;

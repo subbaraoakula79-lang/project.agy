@@ -78,3 +78,4 @@ export interface AuthTokens {
 }
 
 export * from './driver-ride-request.interface';
+export * from './notification.interface';

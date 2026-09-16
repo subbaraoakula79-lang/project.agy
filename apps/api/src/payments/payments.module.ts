@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { AuthModule } from '../auth/auth.module';
 import { DatabaseModule } from '../database/database.module';
 import { RealtimeModule } from '../realtime/realtime.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 import { RideStateMachineService } from '../rides/services/ride-state-machine.service';
 import { PaymentStateMachineService } from './payment-state-machine.service';
 import {
@@ -13,7 +14,7 @@ import { PaymentsService } from './payments.service';
 import { MockPaymentProvider } from './providers/mock-payment.provider';
 
 @Module({
-  imports: [DatabaseModule, RealtimeModule, AuthModule],
+  imports: [DatabaseModule, RealtimeModule, AuthModule, NotificationsModule],
   controllers: [
     PaymentsController,
     DriverPaymentAliasController,
