@@ -88,6 +88,22 @@ export class DriversService {
       throw new BadRequestException('Cannot go online without an active, registered vehicle');
     }
 
+    // Phase 8: Verification check — driver must be approved before going online
+    if (profile.verificationStatus === 'SUSPENDED') {
+      throw new ForbiddenException('Driver account is suspended. Please contact support.');
+    }
+    if (profile.verificationStatus === 'REJECTED') {
+      throw new ForbiddenException('Driver onboarding was rejected.');
+    }
+    if (
+      (profile.verificationStatus === 'PENDING' ||
+        profile.verificationStatus === 'UNDER_REVIEW' ||
+        (profile.verificationStatus && profile.verificationStatus !== 'APPROVED')) &&
+      !profile.isVerified
+    ) {
+      throw new ForbiddenException('Driver account must be verified and approved by an administrator before going online');
+    }
+
     const updated = await this.prisma.driverProfile.update({
       where: { id: profile.id },
       data: { status: DriverStatus.ONLINE_AVAILABLE },

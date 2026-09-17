@@ -61,7 +61,8 @@ model DriverProfile {
   user            User      @relation(fields: [userId], references: [id])
   cityId          String
   city            City      @relation(fields: [cityId], references: [id])
-  status          String    @default("OFFLINE") // DriverStatus enum
+  status          String    @default("OFFLINE") // DriverStatus enum (availability)
+  verificationStatus String @default("PENDING") // VerificationStatus enum (onboarding lifecycle)
   isVerified      Boolean   @default(false)
   isOnboarded     Boolean   @default(false)
   currentLatitude Float?
@@ -70,6 +71,12 @@ model DriverProfile {
   totalRides      Int       @default(0)
   averageRating   Float     @default(0)
   totalEarnings   Float     @default(0)
+  rejectionReason String?
+  suspensionReason String?
+  approvedAt      DateTime?
+  rejectedAt      DateTime?
+  suspendedAt     DateTime?
+  approvedByUserId String?
   deletedAt       DateTime?
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
@@ -82,6 +89,7 @@ model DriverProfile {
 
   @@index([cityId, status])
   @@index([status])
+  @@index([verificationStatus])
 }
 
 // ────────────────────────────────────────────────────────────────
@@ -130,15 +138,18 @@ model DriverDocument {
   driverProfileId String
   driverProfile   DriverProfile @relation(fields: [driverProfileId], references: [id])
   type            String        // DocumentType enum
+  documentNumber  String?       // Document reference/ID number
   documentUrl     String
   status          String        @default("PENDING") // DocumentStatus enum
   rejectionReason String?
   expiresAt       DateTime?
   verifiedAt      DateTime?
+  reviewedByUserId String?      // Admin who reviewed
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
 
   @@index([driverProfileId, type])
+  @@index([driverProfileId, status])
 }
 
 // ────────────────────────────────────────────────────────────────
@@ -370,6 +381,11 @@ enum NotificationType {
   RIDE_CANCELLED
   DRIVER_RIDE_REQUEST
   RIDER_CANCELLED
+  // Phase 8: Admin operations
+  DRIVER_APPROVED
+  DRIVER_REJECTED
+  DRIVER_SUSPENDED
+  RIDE_CANCELLED_BY_ADMIN
 }
 
 enum NotificationStatus {
@@ -431,3 +447,22 @@ model Notification {
   @@index([userId, readAt])
 }
 
+// ────────────────────────────────────────────────────────────────
+// ADMIN AUDIT LOG (PHASE 8)
+// ────────────────────────────────────────────────────────────────
+
+model AdminAuditLog {
+  id            String   @id @default(uuid())
+  adminUserId   String
+  action        String   // DRIVER_APPROVED, DRIVER_REJECTED, DOCUMENT_APPROVED, etc.
+  entityType    String   // DRIVER, DOCUMENT, VEHICLE, RIDE, CITY, PRICING
+  entityId      String
+  reason        String?
+  metadata      Json?    // Safe operational metadata (no secrets)
+  createdAt     DateTime @default(now())
+
+  @@index([adminUserId])
+  @@index([entityType, entityId])
+  @@index([createdAt])
+  @@index([action])
+}

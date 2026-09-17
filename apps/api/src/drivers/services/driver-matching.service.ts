@@ -55,6 +55,7 @@ export class DriverMatchingService implements IDriverMatchingService {
         status: { in: ['ONLINE_AVAILABLE', 'ONLINE'] },
         isVerified: true,
         isOnboarded: true,
+        verificationStatus: 'APPROVED',
         deletedAt: null,
         currentLatitude: { not: null },
         currentLongitude: { not: null },

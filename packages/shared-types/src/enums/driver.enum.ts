@@ -14,6 +14,15 @@ export enum DocumentStatus {
   EXPIRED = 'EXPIRED',
 }
 
+/** Driver account verification lifecycle status. */
+export enum VerificationStatus {
+  PENDING = 'PENDING',
+  UNDER_REVIEW = 'UNDER_REVIEW',
+  APPROVED = 'APPROVED',
+  REJECTED = 'REJECTED',
+  SUSPENDED = 'SUSPENDED',
+}
+
 /** Types of driver documents required for onboarding. */
 export enum DocumentType {
   DRIVING_LICENSE = 'DRIVING_LICENSE',

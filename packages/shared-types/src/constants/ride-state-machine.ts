@@ -13,7 +13,7 @@ import { RideStatus } from '../enums/ride-status.enum';
 export const RIDE_STATE_TRANSITIONS: ReadonlyMap<RideStatus, ReadonlySet<RideStatus>> = new Map([
   [
     RideStatus.REQUESTED,
-    new Set([RideStatus.SEARCHING_DRIVER, RideStatus.CANCELLED_BY_RIDER]),
+    new Set([RideStatus.SEARCHING_DRIVER, RideStatus.CANCELLED_BY_RIDER, RideStatus.CANCELLED_BY_ADMIN]),
   ],
   [
     RideStatus.SEARCHING_DRIVER,
@@ -21,6 +21,7 @@ export const RIDE_STATE_TRANSITIONS: ReadonlyMap<RideStatus, ReadonlySet<RideSta
       RideStatus.DRIVER_ASSIGNED,
       RideStatus.CANCELLED_BY_RIDER,
       RideStatus.CANCELLED_NO_DRIVER,
+      RideStatus.CANCELLED_BY_ADMIN,
     ]),
   ],
   [
@@ -30,6 +31,7 @@ export const RIDE_STATE_TRANSITIONS: ReadonlyMap<RideStatus, ReadonlySet<RideSta
       RideStatus.DRIVER_EN_ROUTE,
       RideStatus.CANCELLED_BY_RIDER,
       RideStatus.CANCELLED_BY_DRIVER,
+      RideStatus.CANCELLED_BY_ADMIN,
     ]),
   ],
   [
@@ -38,6 +40,7 @@ export const RIDE_STATE_TRANSITIONS: ReadonlyMap<RideStatus, ReadonlySet<RideSta
       RideStatus.DRIVER_ARRIVED,
       RideStatus.CANCELLED_BY_RIDER,
       RideStatus.CANCELLED_BY_DRIVER,
+      RideStatus.CANCELLED_BY_ADMIN,
     ]),
   ],
   [
@@ -46,6 +49,7 @@ export const RIDE_STATE_TRANSITIONS: ReadonlyMap<RideStatus, ReadonlySet<RideSta
       RideStatus.DRIVER_ARRIVED,
       RideStatus.CANCELLED_BY_RIDER,
       RideStatus.CANCELLED_BY_DRIVER,
+      RideStatus.CANCELLED_BY_ADMIN,
     ]),
   ],
   [
@@ -54,6 +58,7 @@ export const RIDE_STATE_TRANSITIONS: ReadonlyMap<RideStatus, ReadonlySet<RideSta
       RideStatus.RIDE_STARTED,
       RideStatus.RIDE_IN_PROGRESS,
       RideStatus.CANCELLED_BY_DRIVER,
+      RideStatus.CANCELLED_BY_ADMIN,
     ]),
   ],
   [
@@ -81,6 +86,7 @@ export const RIDE_STATE_TRANSITIONS: ReadonlyMap<RideStatus, ReadonlySet<RideSta
   [RideStatus.CANCELLED_BY_RIDER, new Set()],
   [RideStatus.CANCELLED_BY_DRIVER, new Set()],
   [RideStatus.CANCELLED_NO_DRIVER, new Set()],
+  [RideStatus.CANCELLED_BY_ADMIN, new Set()],
 ]);
 
 /**

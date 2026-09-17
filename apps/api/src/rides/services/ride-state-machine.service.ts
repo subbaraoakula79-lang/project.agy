@@ -91,4 +91,45 @@ export class RideStateMachineService {
       throw new ConflictException(`Driver cannot cancel ride after ride has started (current status: ${status})`);
     }
   }
+
+  /**
+   * Phase 8: Check if an admin is permitted to cancel the ride.
+   * Admin cancellation is strictly restricted to pre-RIDE_STARTED states
+   * to protect in-progress transit and payment integrity.
+   */
+  assertAdminCanCancel(status: string): void {
+    const terminalStates = getTerminalStates();
+    if (terminalStates.includes(status as RideStatus)) {
+      throw new ConflictException(`Cannot cancel ride already in terminal state: ${status}`);
+    }
+
+    const inProgressStates = [
+      RideStatus.RIDE_STARTED,
+      RideStatus.RIDE_IN_PROGRESS,
+      RideStatus.PAYMENT_PENDING,
+      RideStatus.PAYMENT_FAILED,
+      RideStatus.RIDE_COMPLETED,
+      RideStatus.COMPLETED,
+    ];
+
+    if (inProgressStates.includes(status as RideStatus)) {
+      throw new ConflictException(
+        `Admin cannot cancel ride in ${status} status. Active trips in progress and completed trips cannot be cancelled.`,
+      );
+    }
+
+    const allowed = [
+      RideStatus.REQUESTED,
+      RideStatus.SEARCHING_DRIVER,
+      RideStatus.DRIVER_ASSIGNED,
+      RideStatus.DRIVER_ARRIVING,
+      RideStatus.DRIVER_EN_ROUTE,
+      RideStatus.DRIVER_ARRIVED,
+    ];
+
+    if (!allowed.includes(status as RideStatus)) {
+      throw new ConflictException(`Admin cancellation not allowed for ride in status: ${status}`);
+    }
+  }
 }
+

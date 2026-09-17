@@ -65,4 +65,5 @@ packages/db/prisma/migrations/**/migration_lock.toml
 # Misc
 *.log
 tmp/
+.gemini/
 

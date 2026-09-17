@@ -11,6 +11,7 @@ import { RealtimeModule } from './realtime/realtime.module';
 import { RidesModule } from './rides/rides.module';
 import { PaymentsModule } from './payments/payments.module';
 import { NotificationsModule } from './notifications/notifications.module';
+import { AdminModule } from './admin/admin.module';
 
 @Module({
   imports: [
@@ -31,6 +32,7 @@ import { NotificationsModule } from './notifications/notifications.module';
     RidesModule,
     PaymentsModule,
     NotificationsModule,
+    AdminModule,
 
     // Mock service providers (for development)
     MockServicesModule,

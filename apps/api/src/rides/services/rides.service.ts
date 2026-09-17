@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ForbiddenException,
   Injectable,
   Logger,
@@ -107,6 +108,15 @@ export class RidesService {
   ): Promise<RideRecord> {
     if (userRole !== UserRole.RIDER) {
       throw new ForbiddenException('Only riders can request rides');
+    }
+
+    // Phase 8: Verify operational status of the city
+    const targetCityId = 'd75253d1-4456-42c6-8483-e726bd20d156';
+    if (this.prisma.city) {
+      const city = await this.prisma.city.findUnique({ where: { id: targetCityId } });
+      if (city && !city.isActive) {
+        throw new BadRequestException('Ride service is currently suspended in this city');
+      }
     }
 
     const origin = { latitude: dto.pickupLatitude, longitude: dto.pickupLongitude };

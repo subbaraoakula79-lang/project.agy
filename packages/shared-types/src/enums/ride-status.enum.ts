@@ -49,4 +49,7 @@ export enum RideStatus {
 
   /** No driver found within the search timeout. */
   CANCELLED_NO_DRIVER = 'CANCELLED_NO_DRIVER',
+
+  /** Admin cancelled the ride for operational reasons. */
+  CANCELLED_BY_ADMIN = 'CANCELLED_BY_ADMIN',
 }
