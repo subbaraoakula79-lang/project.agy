@@ -561,6 +561,205 @@ export class RidesService {
     return this.mapPrismaRideToRecord(updated);
   }
 
+  /**
+   * Get paginated ride history for authenticated Rider or Driver.
+   * Enforces strict ownership.
+   */
+  async getRideHistory(
+    userId: string,
+    userRole: UserRole,
+    query: { page?: number; limit?: number; status?: string; startDate?: string; endDate?: string },
+  ) {
+    const page = Math.max(query.page || 1, 1);
+    const limit = Math.min(query.limit || 20, 100);
+    const skip = (page - 1) * limit;
+
+    const where: any = {};
+
+    if (userRole === UserRole.RIDER) {
+      where.riderId = userId;
+    } else if (userRole === UserRole.DRIVER) {
+      const driverProfile = await this.prisma.driverProfile.findUnique({
+        where: { userId },
+      });
+      if (!driverProfile) {
+        return {
+          data: [],
+          meta: { page, limit, total: 0, totalPages: 0 },
+        };
+      }
+      where.driverProfileId = driverProfile.id;
+    } else {
+      throw new ForbiddenException('Ride history endpoint is for Riders and Drivers only. Admins must use Admin APIs.');
+    }
+
+    if (query.status) {
+      if (query.status === 'CANCELLED') {
+        where.status = {
+          in: [
+            RideStatus.CANCELLED_BY_RIDER,
+            RideStatus.CANCELLED_BY_DRIVER,
+            RideStatus.CANCELLED_NO_DRIVER,
+            RideStatus.CANCELLED_BY_ADMIN,
+          ],
+        };
+      } else {
+        where.status = query.status;
+      }
+    }
+
+    if (query.startDate || query.endDate) {
+      where.createdAt = {};
+      if (query.startDate) where.createdAt.gte = new Date(query.startDate);
+      if (query.endDate) where.createdAt.lte = new Date(query.endDate);
+    }
+
+    const [rides, total] = await Promise.all([
+      this.prisma.ride.findMany({
+        where,
+        include: {
+          location: true,
+          vehicle: {
+            include: { vehicleType: true },
+          },
+          payment: true,
+          rider: {
+            select: { id: true, firstName: true, lastName: true, phoneNumber: true },
+          },
+          driverProfile: {
+            include: {
+              user: { select: { id: true, firstName: true, lastName: true, phoneNumber: true } },
+            },
+          },
+          ratings: {
+            include: {
+              raterUser: { select: { id: true, firstName: true, lastName: true, role: true } },
+              ratedUser: { select: { id: true, firstName: true, lastName: true, role: true } },
+            },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit,
+      }),
+      this.prisma.ride.count({ where }),
+    ]);
+
+    const data = rides.map((ride) => {
+      const myRating = ride.ratings.find((r) => r.raterUserId === userId) || null;
+      return {
+        id: ride.id,
+        riderId: ride.riderId,
+        driverProfileId: ride.driverProfileId,
+        status: ride.status,
+        paymentMethod: ride.paymentMethod,
+        estimatedFare: ride.estimatedFare,
+        actualFare: ride.actualFare ?? ride.estimatedFare,
+        estimatedDistanceMeters: ride.estimatedDistanceMeters,
+        estimatedDurationSeconds: ride.estimatedDurationSeconds,
+        actualDistanceMeters: ride.actualDistanceMeters,
+        actualDurationSeconds: ride.actualDurationSeconds,
+        requestedAt: ride.requestedAt.toISOString(),
+        completedAt: ride.completedAt ? ride.completedAt.toISOString() : null,
+        cancelledAt: ride.cancelledAt ? ride.cancelledAt.toISOString() : null,
+        cancellationReason: ride.cancellationReason,
+
+        location: ride.location
+          ? {
+              pickupLatitude: ride.location.pickupLatitude,
+              pickupLongitude: ride.location.pickupLongitude,
+              pickupAddress: ride.location.pickupAddress,
+              dropLatitude: ride.location.dropLatitude,
+              dropLongitude: ride.location.dropLongitude,
+              dropAddress: ride.location.dropAddress,
+            }
+          : null,
+
+        vehicle: ride.vehicle
+          ? {
+              id: ride.vehicle.id,
+              registrationNumber: ride.vehicle.registrationNumber,
+              make: ride.vehicle.make,
+              model: ride.vehicle.model,
+              color: ride.vehicle.color,
+              vehicleType: ride.vehicle.vehicleType
+                ? {
+                    name: ride.vehicle.vehicleType.name,
+                    displayName: ride.vehicle.vehicleType.displayName,
+                  }
+                : undefined,
+            }
+          : null,
+
+        payment: ride.payment
+          ? {
+              id: ride.payment.id,
+              amount: ride.payment.amount,
+              method: ride.payment.method,
+              status: ride.payment.status,
+              paidAt: ride.payment.paidAt ? ride.payment.paidAt.toISOString() : null,
+            }
+          : null,
+
+        rider: ride.rider
+          ? {
+              id: ride.rider.id,
+              firstName: ride.rider.firstName,
+              lastName: ride.rider.lastName,
+              phoneNumber: ride.rider.phoneNumber,
+            }
+          : null,
+
+        driver: ride.driverProfile
+          ? {
+              id: ride.driverProfile.id,
+              userId: ride.driverProfile.user.id,
+              firstName: ride.driverProfile.user.firstName,
+              lastName: ride.driverProfile.user.lastName,
+              phoneNumber: ride.driverProfile.user.phoneNumber,
+              averageRating: ride.driverProfile.averageRating,
+            }
+          : null,
+
+        ratings: ride.ratings.map((r) => ({
+          id: r.id,
+          rideId: r.rideId,
+          raterUserId: r.raterUserId,
+          ratedUserId: r.ratedUserId,
+          rating: r.rating,
+          comment: r.comment,
+          createdAt: r.createdAt.toISOString(),
+          updatedAt: r.updatedAt.toISOString(),
+          rater: r.raterUser,
+          ratedUser: r.ratedUser,
+        })),
+
+        myRating: myRating
+          ? {
+              id: myRating.id,
+              rideId: myRating.rideId,
+              raterUserId: myRating.raterUserId,
+              ratedUserId: myRating.ratedUserId,
+              rating: myRating.rating,
+              comment: myRating.comment,
+              createdAt: myRating.createdAt.toISOString(),
+              updatedAt: myRating.updatedAt.toISOString(),
+            }
+          : null,
+      };
+    });
+
+    return {
+      data,
+      meta: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
+  }
+
   /** Helper to map Prisma Ride object to RideRecord contract. */
   private mapPrismaRideToRecord(ride: any): RideRecord {
     const driver = ride.driverProfile

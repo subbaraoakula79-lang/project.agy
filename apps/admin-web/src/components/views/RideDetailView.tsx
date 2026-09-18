@@ -359,6 +359,70 @@ export function RideDetailView({ rideId, onBack }: RideDetailViewProps) {
         </div>
       </div>
 
+      {/* Ratings & Reviews Card */}
+      <div
+        style={{
+          backgroundColor: '#111827',
+          border: '1px solid #1E293B',
+          borderRadius: '16px',
+          padding: '1.75rem',
+        }}
+      >
+        <div style={{ fontSize: '0.8rem', color: '#94A3B8', fontWeight: 700, textTransform: 'uppercase', marginBottom: '1rem' }}>
+          ⭐ Persistent Ratings & Reviews Audit
+        </div>
+
+        {Array.isArray(ride.ratings) && ride.ratings.length > 0 ? (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '1.25rem' }}>
+            {ride.ratings.map((r: any) => {
+              const isRiderRater = r.raterUser?.role === 'RIDER';
+              return (
+                <div
+                  key={r.id}
+                  style={{
+                    backgroundColor: '#1E293B',
+                    border: '1px solid #334155',
+                    borderRadius: '10px',
+                    padding: '1rem',
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                    <span style={{ fontSize: '0.85rem', fontWeight: 700, color: isRiderRater ? '#60A5FA' : '#34D399' }}>
+                      {isRiderRater ? '👤 Rider -> Captain' : '🚖 Captain -> Rider'}
+                    </span>
+                    <span style={{ color: '#F59E0B', fontWeight: 800, fontSize: '1.1rem' }}>
+                      {'★'.repeat(r.rating)} ({r.rating}/5)
+                    </span>
+                  </div>
+
+                  <div style={{ fontSize: '0.85rem', color: '#F1F5F9', marginBottom: '0.4rem' }}>
+                    <strong>Rater:</strong> {r.raterUser?.firstName || 'User'} ({r.raterUser?.role || 'PARTICIPANT'})
+                  </div>
+
+                  {r.comment ? (
+                    <div style={{ fontSize: '0.85rem', color: '#CBD5E1', fontStyle: 'italic', backgroundColor: '#0F172A', padding: '0.5rem', borderRadius: '6px', marginTop: '0.4rem' }}>
+                      "{r.comment}"
+                    </div>
+                  ) : (
+                    <div style={{ fontSize: '0.8rem', color: '#64748B', fontStyle: 'italic', marginTop: '0.3rem' }}>
+                      No text review provided
+                    </div>
+                  )}
+
+                  <div style={{ fontSize: '0.75rem', color: '#64748B', marginTop: '0.5rem' }}>
+                    Submitted: {new Date(r.createdAt).toLocaleString()}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div style={{ fontSize: '0.85rem', color: '#64748B', fontStyle: 'italic' }}>
+            No ratings have been submitted for this ride yet.
+          </div>
+        )}
+      </div>
+
       {/* Admin Cancellation Modal */}
       <Modal
         isOpen={cancelModalOpen}

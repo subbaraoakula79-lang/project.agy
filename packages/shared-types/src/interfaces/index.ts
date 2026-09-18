@@ -79,3 +79,8 @@ export interface AuthTokens {
 
 export * from './driver-ride-request.interface';
 export * from './notification.interface';
+export * from './rating.interface';
+export * from './ride-history.interface';
+export * from './safety.interface';
+export * from './support.interface';
+export * from './incident.interface';

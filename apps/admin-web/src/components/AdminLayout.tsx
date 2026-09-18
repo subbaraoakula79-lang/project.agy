@@ -30,6 +30,9 @@ export function AdminLayout({
     { id: 'rides', label: 'Live Rides', icon: '🗺️' },
     { id: 'cities', label: 'Cities', icon: '🏙️' },
     { id: 'pricing', label: 'Pricing Rules', icon: '🏷️' },
+    { id: 'safety', label: 'Safety Control', icon: '🚨' },
+    { id: 'support', label: 'Support Desk', icon: '💬' },
+    { id: 'incidents', label: 'Incidents Log', icon: '⚠️' },
     { id: 'audit-logs', label: 'Audit Trail', icon: '📜' },
   ];
 

@@ -107,13 +107,14 @@ describe('Ride State Machine', () => {
   });
 
   describe('getTerminalStates', () => {
-    it('should return exactly 4 terminal states', () => {
+    it('should return exactly 5 terminal states', () => {
       const terminals = getTerminalStates();
-      expect(terminals).toHaveLength(4);
+      expect(terminals).toHaveLength(5);
       expect(terminals).toContain(RideStatus.COMPLETED);
       expect(terminals).toContain(RideStatus.CANCELLED_BY_RIDER);
       expect(terminals).toContain(RideStatus.CANCELLED_BY_DRIVER);
       expect(terminals).toContain(RideStatus.CANCELLED_NO_DRIVER);
+      expect(terminals).toContain(RideStatus.CANCELLED_BY_ADMIN);
     });
   });
 

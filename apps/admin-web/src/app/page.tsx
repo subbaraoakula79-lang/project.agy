@@ -12,6 +12,9 @@ import { RideDetailView } from '../components/views/RideDetailView';
 import { CitiesView } from '../components/views/CitiesView';
 import { PricingView } from '../components/views/PricingView';
 import { AuditLogsView } from '../components/views/AuditLogsView';
+import { SafetyView } from '../components/views/SafetyView';
+import { SupportTicketsView } from '../components/views/SupportTicketsView';
+import { IncidentsView } from '../components/views/IncidentsView';
 import { api } from '../lib/api';
 
 function AdminApp() {
@@ -293,6 +296,12 @@ function AdminApp() {
       {currentTab === 'cities' && <CitiesView />}
 
       {currentTab === 'pricing' && <PricingView />}
+
+      {currentTab === 'safety' && <SafetyView />}
+
+      {currentTab === 'support' && <SupportTicketsView />}
+
+      {currentTab === 'incidents' && <IncidentsView />}
 
       {currentTab === 'audit-logs' && <AuditLogsView />}
     </AdminLayout>

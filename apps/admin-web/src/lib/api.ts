@@ -316,6 +316,18 @@ class ApiClient {
       meta: { page: number; limit: number; total: number; totalPages: number };
     }>(`/admin/audit-logs?${query.toString()}`);
   }
+
+  // Generic helpers
+  async get<T = any>(endpoint: string): Promise<T> {
+    return this.request<T>(endpoint, { method: 'GET' });
+  }
+
+  async patch<T = any>(endpoint: string, data?: any): Promise<T> {
+    return this.request<T>(endpoint, {
+      method: 'PATCH',
+      body: data ? JSON.stringify(data) : undefined,
+    });
+  }
 }
 
 export const api = new ApiClient();

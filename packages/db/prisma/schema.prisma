@@ -40,6 +40,14 @@ model User {
   ratingsGiven  Rating[]  @relation("RaterRatings")
   ratingsReceived Rating[] @relation("RateeRatings")
 
+  reportedSafetyEvents SafetyEvent[] @relation("ReportedSafetyEvents")
+  resolvedSafetyEvents SafetyEvent[] @relation("ResolvedSafetyEvents")
+  tripShares          TripShare[]
+  createdSupportTickets SupportTicket[] @relation("CreatedSupportTickets")
+  resolvedSupportTickets SupportTicket[] @relation("ResolvedSupportTickets")
+  reportedIncidents   Incident[] @relation("ReportedIncidents")
+  resolvedIncidents   Incident[] @relation("ResolvedIncidents")
+
   @@index([role])
   @@index([phoneNumber])
 }
@@ -194,8 +202,12 @@ model Ride {
 
   location        RideLocation?
   payment         Payment?
-  rating          Rating?
+  ratings         Rating[]
   driverRequests  DriverRideRequest[]
+  safetyEvents    SafetyEvent[]
+  tripShares      TripShare[]
+  supportTickets  SupportTicket[]
+  incidents       Incident[]
 
   @@index([riderId])
   @@index([driverProfileId])
@@ -264,18 +276,21 @@ model Payment {
 
 model Rating {
   id          String   @id @default(uuid())
-  rideId      String   @unique
+  rideId      String
   ride        Ride     @relation(fields: [rideId], references: [id])
-  raterId     String
-  rater       User     @relation("RaterRatings", fields: [raterId], references: [id])
-  rateeId     String
-  ratee       User     @relation("RateeRatings", fields: [rateeId], references: [id])
-  score       Int      // 1-5
+  raterUserId String
+  raterUser   User     @relation("RaterRatings", fields: [raterUserId], references: [id])
+  ratedUserId String
+  ratedUser   User     @relation("RateeRatings", fields: [ratedUserId], references: [id])
+  rating      Int      // 1-5 integer
   comment     String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  @@index([rateeId])
+  @@unique([rideId, raterUserId])
+  @@index([ratedUserId])
+  @@index([raterUserId])
+  @@index([rideId])
 }
 
 
@@ -465,4 +480,150 @@ model AdminAuditLog {
   @@index([entityType, entityId])
   @@index([createdAt])
   @@index([action])
+}
+
+// ────────────────────────────────────────────────────────────────
+// SAFETY, SUPPORT & INCIDENT MANAGEMENT (PHASE 10)
+// ────────────────────────────────────────────────────────────────
+
+enum SafetyEventType {
+  SOS_TRIGGERED
+  SOS_RESOLVED
+  TRIP_SHARED
+  SAFETY_REPORT
+}
+
+enum SafetyEventStatus {
+  ACTIVE
+  RESOLVED
+}
+
+model SafetyEvent {
+  id               String            @id @default(uuid())
+  rideId           String
+  ride             Ride              @relation(fields: [rideId], references: [id], onDelete: Cascade)
+  reportedByUserId String
+  reportedByUser   User              @relation("ReportedSafetyEvents", fields: [reportedByUserId], references: [id], onDelete: Cascade)
+  type             SafetyEventType
+  status           SafetyEventStatus @default(ACTIVE)
+  description      String?
+  resolvedAt       DateTime?
+  resolvedByUserId String?
+  resolvedByUser   User?             @relation("ResolvedSafetyEvents", fields: [resolvedByUserId], references: [id])
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  @@index([rideId])
+  @@index([reportedByUserId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model TripShare {
+  id               String   @id @default(uuid())
+  rideId           String
+  ride             Ride     @relation(fields: [rideId], references: [id], onDelete: Cascade)
+  shareToken       String   @unique
+  createdByUserId  String
+  createdByUser    User     @relation(fields: [createdByUserId], references: [id], onDelete: Cascade)
+  expiresAt        DateTime
+  createdAt        DateTime @default(now())
+
+  @@index([rideId])
+  @@index([shareToken])
+  @@index([createdByUserId])
+}
+
+enum SupportTicketCategory {
+  PAYMENT
+  DRIVER
+  RIDER
+  RIDE
+  SAFETY
+  OTHER
+}
+
+enum SupportTicketStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
+enum SupportTicketPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+model SupportTicket {
+  id               String                @id @default(uuid())
+  createdByUserId  String
+  createdByUser    User                  @relation("CreatedSupportTickets", fields: [createdByUserId], references: [id], onDelete: Cascade)
+  rideId           String?
+  ride             Ride?                 @relation(fields: [rideId], references: [id], onDelete: SetNull)
+  category         SupportTicketCategory @default(OTHER)
+  subject          String
+  description      String
+  status           SupportTicketStatus   @default(OPEN)
+  priority         SupportTicketPriority @default(MEDIUM)
+  resolvedAt       DateTime?
+  resolvedByUserId String?
+  resolvedByUser   User?                 @relation("ResolvedSupportTickets", fields: [resolvedByUserId], references: [id])
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
+
+  @@index([createdByUserId])
+  @@index([rideId])
+  @@index([status])
+  @@index([category])
+  @@index([createdAt])
+}
+
+enum IncidentCategory {
+  SAFETY
+  DRIVER_BEHAVIOR
+  RIDER_BEHAVIOR
+  VEHICLE
+  PAYMENT
+  ACCIDENT
+  OTHER
+}
+
+enum IncidentStatus {
+  OPEN
+  UNDER_REVIEW
+  RESOLVED
+  CLOSED
+}
+
+enum IncidentSeverity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+model Incident {
+  id               String           @id @default(uuid())
+  rideId           String
+  ride             Ride             @relation(fields: [rideId], references: [id], onDelete: Cascade)
+  reportedByUserId String
+  reportedByUser   User             @relation("ReportedIncidents", fields: [reportedByUserId], references: [id], onDelete: Cascade)
+  category         IncidentCategory @default(SAFETY)
+  severity         IncidentSeverity @default(MEDIUM)
+  description      String
+  status           IncidentStatus   @default(OPEN)
+  resolvedAt       DateTime?
+  resolvedByUserId String?
+  resolvedByUser   User?            @relation("ResolvedIncidents", fields: [resolvedByUserId], references: [id])
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  @@index([rideId])
+  @@index([reportedByUserId])
+  @@index([status])
+  @@index([severity])
+  @@index([createdAt])
 }

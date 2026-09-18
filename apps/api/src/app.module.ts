@@ -12,6 +12,10 @@ import { RidesModule } from './rides/rides.module';
 import { PaymentsModule } from './payments/payments.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { AdminModule } from './admin/admin.module';
+import { RatingsModule } from './ratings/ratings.module';
+import { SafetyModule } from './safety/safety.module';
+import { SupportModule } from './support/support.module';
+import { IncidentsModule } from './incidents/incidents.module';
 
 @Module({
   imports: [
@@ -33,6 +37,10 @@ import { AdminModule } from './admin/admin.module';
     PaymentsModule,
     NotificationsModule,
     AdminModule,
+    RatingsModule,
+    SafetyModule,
+    SupportModule,
+    IncidentsModule,
 
     // Mock service providers (for development)
     MockServicesModule,

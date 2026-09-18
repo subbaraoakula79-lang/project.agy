@@ -144,7 +144,16 @@ export class AdminRideService {
           include: { vehicleType: true },
         },
         payment: true,
-        rating: true,
+        ratings: {
+          include: {
+            raterUser: {
+              select: { id: true, firstName: true, lastName: true, role: true },
+            },
+            ratedUser: {
+              select: { id: true, firstName: true, lastName: true, role: true },
+            },
+          },
+        },
         driverRequests: {
           orderBy: { createdAt: 'desc' },
           take: 10,

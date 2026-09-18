@@ -6,6 +6,7 @@ import {
   HttpStatus,
   Param,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { ApiResponse, UserRole } from '@yatra-seva/shared-types';
@@ -64,6 +65,28 @@ export class RidesController {
   ): Promise<ApiResponse<RideRecord[]>> {
     const data = await this.ridesService.getRiderRides(userId, role);
     return { success: true, data };
+  }
+
+  /** GET /rides/history — Get paginated ride history for authenticated rider or driver. */
+  @Get('history')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  async getRideHistory(
+    @CurrentUser('userId') userId: string,
+    @CurrentUser('role') role: UserRole,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+    @Query('status') status?: string,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+  ): Promise<ApiResponse> {
+    const result = await this.ridesService.getRideHistory(userId, role, {
+      page: page ? parseInt(page, 10) : 1,
+      limit: limit ? parseInt(limit, 10) : 20,
+      status,
+      startDate,
+      endDate,
+    });
+    return { success: true, ...result };
   }
 
   /** GET /rides/active — Get current active ride for authenticated user. */
