@@ -269,11 +269,12 @@ class ApiClient {
     if (params.cityId) query.set('cityId', params.cityId);
     if (params.vehicleTypeId) query.set('vehicleTypeId', params.vehicleTypeId);
 
+    const qs = query.toString();
     return this.request<{
       success: boolean;
       pricingConfigs: any[];
       pagination: { page: number; limit: number; total: number; totalPages: number };
-    }>(`/admin/pricing?${query.toString()}`);
+    }>(`/admin/pricing${qs ? `?${qs}` : ''}`);
   }
 
   async updatePricing(

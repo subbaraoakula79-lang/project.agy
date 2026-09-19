@@ -106,6 +106,16 @@ export class UpdateCityDto {
 
 // ── Pricing ─────────────────────────────────────────────────────
 
+export class ListPricingQueryDto extends PaginationQueryDto {
+  @IsOptional()
+  @IsString()
+  cityId?: string;
+
+  @IsOptional()
+  @IsString()
+  vehicleTypeId?: string;
+}
+
 export class UpdatePricingDto {
   @IsOptional()
   @Type(() => Number)

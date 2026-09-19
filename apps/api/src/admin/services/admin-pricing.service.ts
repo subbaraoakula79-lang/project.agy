@@ -1,12 +1,9 @@
 import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { AdminAuditService } from './admin-audit.service';
-import { PaginationQueryDto, UpdatePricingDto } from '../dto/admin.dto';
+import { PaginationQueryDto, UpdatePricingDto, ListPricingQueryDto } from '../dto/admin.dto';
 
-export class ListPricingQueryDto extends PaginationQueryDto {
-  cityId?: string;
-  vehicleTypeId?: string;
-}
+export { ListPricingQueryDto };
 
 @Injectable()
 export class AdminPricingService {
