@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import {
-  ActivityIndicator,
   FlatList,
   Modal,
   StyleSheet,
@@ -8,7 +7,17 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  SafeAreaView,
 } from 'react-native';
+import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import { colors, spacing, fontSizes, borderRadius, shadows } from './theme';
+import { AppHeader } from '../components/AppHeader';
+import { RideCard } from '../components/RideCard';
+import { EmptyState } from '../components/EmptyState';
+import { PrimaryButton } from '../components/PrimaryButton';
+import { SecondaryButton } from '../components/SecondaryButton';
+import { BottomTabBar } from '../components/BottomTabBar';
 
 interface Rating {
   id: string;
@@ -46,8 +55,9 @@ interface RideHistoryItem {
 }
 
 export default function RiderHistoryScreen() {
+  const router = useRouter();
+
   const [rides, setRides] = useState<RideHistoryItem[]>([
-    // Mock initial demonstration ride
     {
       id: 'ride-hist-101',
       status: 'COMPLETED',
@@ -148,350 +158,275 @@ export default function RiderHistoryScreen() {
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>📜 Ride History</Text>
-      <Text style={styles.subtitle}>Your trips in Kakinada, AP</Text>
+    <SafeAreaView style={styles.safeArea}>
+      <AppHeader
+        title="Ride History"
+        subtitle="Your trips in Kakinada, AP"
+        showBack={true}
+        onBack={() => router.replace('/')}
+        showNotification={false}
+        showProfile={true}
+      />
 
-      {/* Filter Chips */}
-      <View style={styles.filterRow}>
-        {(['ALL', 'COMPLETED', 'CANCELLED'] as const).map((f) => (
-          <TouchableOpacity
-            key={f}
-            style={[styles.filterChip, filter === f && styles.filterChipActive]}
-            onPress={() => setFilter(f)}
-          >
-            <Text style={[styles.filterChipText, filter === f && styles.filterChipTextActive]}>
-              {f}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
+      <View style={styles.container}>
+        {/* Filter Pills */}
+        <View style={styles.filterRow} accessibilityRole="tablist">
+          {(['ALL', 'COMPLETED', 'CANCELLED'] as const).map((f) => {
+            const isActive = filter === f;
+            const label = f === 'ALL' ? 'All Rides' : f === 'COMPLETED' ? 'Completed' : 'Cancelled';
+            return (
+              <TouchableOpacity
+                key={f}
+                style={[styles.filterChip, isActive && styles.filterChipActive]}
+                onPress={() => setFilter(f)}
+                activeOpacity={0.7}
+                accessibilityRole="tab"
+                accessibilityLabel={`${label} filter`}
+                accessibilityState={{ selected: isActive }}
+              >
+                <Text
+                  style={[
+                    styles.filterChipText,
+                    isActive && styles.filterChipTextActive,
+                  ]}
+                >
+                  {label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
 
-      <FlatList
+        {/* Rides List */}
+        <FlatList
           data={filteredRides}
           keyExtractor={(item) => item.id}
-          contentContainerStyle={{ paddingBottom: 20 }}
+          contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
+          ListEmptyComponent={
+            <EmptyState
+              iconName="receipt-outline"
+              title="No rides found"
+              description={`You have no ${filter !== 'ALL' ? filter.toLowerCase() : ''} rides recorded in Kakinada yet.`}
+              actionTitle="Book a Ride"
+              onActionPress={() => router.replace('/')}
+            />
+          }
           renderItem={({ item }) => {
-            const isCompleted = item.status === 'COMPLETED' || item.status === 'RIDE_COMPLETED';
-            const isCancelled = item.status.startsWith('CANCELLED');
+            const formattedDate = new Date(item.requestedAt).toLocaleString('en-IN', {
+              dateStyle: 'medium',
+              timeStyle: 'short',
+            });
 
             return (
-              <View style={styles.rideCard}>
-                <View style={styles.rideCardHeader}>
-                  <Text style={styles.vehicleType}>
-                    {item.vehicle?.vehicleType?.displayName || 'Vehicle'} • ₹{item.actualFare || item.estimatedFare}
-                  </Text>
-                  <View
-                    style={[
-                      styles.statusBadge,
-                      { backgroundColor: isCompleted ? '#27ae60' : isCancelled ? '#c0392b' : '#f39c12' },
-                    ]}
-                  >
-                    <Text style={styles.statusText}>{item.status}</Text>
-                  </View>
-                </View>
-
-                <Text style={styles.dateText}>
-                  📅 {new Date(item.requestedAt).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })}
-                </Text>
-
-                <View style={styles.locationBox}>
-                  <Text style={styles.locText}>🟢 Pickup: {item.location?.pickupAddress}</Text>
-                  <Text style={styles.locText}>🔴 Drop: {item.location?.dropAddress}</Text>
-                </View>
-
-                {item.driver && (
-                  <Text style={styles.driverText}>
-                    🚖 Captain: {item.driver.firstName} {item.driver.lastName} (⭐ {item.driver.averageRating || 'New'})
-                  </Text>
-                )}
-
-                {/* Rating Section */}
-                {isCompleted && (
-                  <View style={styles.ratingSection}>
-                    {item.myRating ? (
-                      <View style={styles.submittedRatingBox}>
-                        <Text style={styles.submittedRatingText}>
-                          ✅ Rated Captain: {'⭐'.repeat(item.myRating.rating)} ({item.myRating.rating}/5)
-                        </Text>
-                        {item.myRating.comment ? (
-                          <Text style={styles.commentText}>"{item.myRating.comment}"</Text>
-                        ) : null}
-                      </View>
-                    ) : (
-                      <TouchableOpacity
-                        style={styles.rateButton}
-                        onPress={() => handleOpenRating(item)}
-                      >
-                        <Text style={styles.rateButtonText}>⭐ Rate Captain</Text>
-                      </TouchableOpacity>
-                    )}
-                  </View>
-                )}
-              </View>
+              <RideCard
+                id={item.id}
+                date={formattedDate}
+                pickup={item.location?.pickupAddress || 'Kakinada'}
+                destination={item.location?.dropAddress || 'Destination'}
+                vehicleType={item.vehicle?.vehicleType?.displayName || 'Auto'}
+                fare={item.actualFare || item.estimatedFare}
+                status={item.status}
+                driverName={
+                  item.driver
+                    ? `${item.driver.firstName || ''} ${item.driver.lastName || ''}`.trim()
+                    : undefined
+                }
+                driverRating={item.driver?.averageRating}
+                ratedStars={item.myRating?.rating}
+                onRatePress={() => handleOpenRating(item)}
+              />
             );
           }}
         />
+      </View>
 
       {/* Rating Submission Modal */}
-      <Modal visible={ratingModalVisible} transparent animationType="slide">
+      <Modal visible={ratingModalVisible} transparent animationType="fade">
         <View style={styles.modalOverlay}>
-          <View style={styles.modalCard}>
+          <View style={styles.modalCard} accessibilityLabel="Rate your trip modal">
+            <View style={styles.modalIconCircle}>
+              <Ionicons name="star" size={28} color="#D97706" />
+            </View>
             <Text style={styles.modalTitle}>Rate Your Trip</Text>
             <Text style={styles.modalSub}>
-              How was your ride with {selectedRide?.driver?.firstName || 'Captain'}?
+              How was your journey with {selectedRide?.driver?.firstName || 'Captain'}?
             </Text>
 
-            {ratingError ? <Text style={styles.errorText}>{ratingError}</Text> : null}
+            {ratingError ? <Text style={styles.modalErrorText}>{ratingError}</Text> : null}
 
             {/* Star Selector */}
             <View style={styles.starRow}>
               {[1, 2, 3, 4, 5].map((star) => (
-                <TouchableOpacity key={star} onPress={() => setSelectedScore(star)}>
-                  <Text style={[styles.starIcon, selectedScore >= star && styles.starActive]}>
-                    ★
-                  </Text>
+                <TouchableOpacity
+                  key={star}
+                  onPress={() => setSelectedScore(star)}
+                  style={styles.starTouch}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${star} stars`}
+                >
+                  <Ionicons
+                    name={selectedScore >= star ? 'star' : 'star-outline'}
+                    size={36}
+                    color={selectedScore >= star ? '#F59E0B' : colors.textMuted}
+                  />
                 </TouchableOpacity>
               ))}
             </View>
 
-            <Text style={styles.scoreLabel}>{selectedScore} Out of 5 Stars</Text>
+            <Text style={styles.scoreLabel}>{selectedScore} of 5 Stars</Text>
 
             <TextInput
               style={styles.commentInput}
-              placeholder="Write an optional review..."
-              placeholderTextColor="#8a8a9a"
+              placeholder="Leave feedback for the captain (optional)..."
+              placeholderTextColor={colors.textMuted}
               value={comment}
               onChangeText={setComment}
               multiline
               maxLength={500}
+              accessibilityLabel="Optional review comments"
             />
 
             <View style={styles.modalBtnRow}>
-              <TouchableOpacity
-                style={[styles.modalBtn, { backgroundColor: '#4a5568' }]}
+              <SecondaryButton
+                title="Cancel"
                 onPress={() => setRatingModalVisible(false)}
-              >
-                <Text style={styles.modalBtnText}>Cancel</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.modalBtn, { backgroundColor: '#e94560' }]}
+                style={styles.modalBtn}
+              />
+              <PrimaryButton
+                title="Submit Rating"
                 onPress={handleSubmitRating}
-                disabled={submittingRating}
-              >
-                {submittingRating ? (
-                  <ActivityIndicator color="#fff" />
-                ) : (
-                  <Text style={styles.modalBtnText}>Submit Rating</Text>
-                )}
-              </TouchableOpacity>
+                loading={submittingRating}
+                style={styles.modalBtn}
+              />
             </View>
           </View>
         </View>
       </Modal>
-    </View>
+
+      {/* Bottom Navigation */}
+      <BottomTabBar activeTab="rides" />
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
   container: {
     flex: 1,
-    backgroundColor: '#1a1a2e',
-    padding: 16,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#e94560',
-    marginTop: 20,
-    marginBottom: 2,
-  },
-  subtitle: {
-    fontSize: 13,
-    color: '#8a8a9a',
-    marginBottom: 16,
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.sm,
   },
   filterRow: {
     flexDirection: 'row',
-    marginBottom: 16,
-    gap: 8,
+    gap: spacing.sm,
+    marginBottom: spacing.md,
   },
   filterChip: {
-    backgroundColor: '#0f3460',
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 20,
+    flex: 1,
+    paddingVertical: spacing.sm,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: borderRadius.full,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   filterChipActive: {
-    backgroundColor: '#e94560',
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
   },
   filterChipText: {
-    color: '#eaeaea',
-    fontSize: 13,
+    fontSize: fontSizes.xs + 1,
+    fontWeight: '600',
+    color: colors.textSecondary,
   },
   filterChipTextActive: {
-    color: '#fff',
-    fontWeight: 'bold',
+    color: colors.surface,
+    fontWeight: '700',
   },
-  rideCard: {
-    backgroundColor: '#16213e',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: '#0f3460',
-  },
-  rideCardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  vehicleType: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  statusBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  statusText: {
-    color: '#fff',
-    fontSize: 11,
-    fontWeight: 'bold',
-  },
-  dateText: {
-    color: '#8a8a9a',
-    fontSize: 12,
-    marginBottom: 10,
-  },
-  locationBox: {
-    backgroundColor: '#0f3460',
-    padding: 10,
-    borderRadius: 8,
-    marginBottom: 10,
-  },
-  locText: {
-    color: '#eaeaea',
-    fontSize: 13,
-    marginBottom: 4,
-  },
-  driverText: {
-    color: '#53a8b6',
-    fontSize: 13,
-    fontWeight: '600',
-    marginBottom: 10,
-  },
-  ratingSection: {
-    marginTop: 6,
-  },
-  rateButton: {
-    backgroundColor: '#f39c12',
-    paddingVertical: 10,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  rateButtonText: {
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 14,
-  },
-  submittedRatingBox: {
-    backgroundColor: '#1f4068',
-    padding: 10,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#27ae60',
-  },
-  submittedRatingText: {
-    color: '#2ecc71',
-    fontWeight: 'bold',
-    fontSize: 13,
-  },
-  commentText: {
-    color: '#eaeaea',
-    fontSize: 12,
-    fontStyle: 'italic',
-    marginTop: 4,
+  listContent: {
+    paddingBottom: spacing.lg,
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.7)',
+    backgroundColor: colors.overlay,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
+    padding: spacing.lg,
   },
   modalCard: {
     width: '100%',
-    backgroundColor: '#16213e',
-    borderRadius: 16,
-    padding: 20,
+    backgroundColor: colors.surface,
+    borderRadius: borderRadius.lg,
+    padding: spacing.xl,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#0f3460',
+    borderColor: colors.border,
+    ...shadows.elevated,
+  },
+  modalIconCircle: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: colors.warningLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.sm,
   },
   modalTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#fff',
-    marginBottom: 6,
+    fontSize: fontSizes.xl,
+    fontWeight: '700',
+    color: colors.textPrimary,
+    marginBottom: 4,
   },
   modalSub: {
-    fontSize: 13,
-    color: '#8a8a9a',
-    marginBottom: 16,
+    fontSize: fontSizes.sm,
+    color: colors.textSecondary,
+    marginBottom: spacing.md,
     textAlign: 'center',
   },
   starRow: {
     flexDirection: 'row',
-    gap: 10,
-    marginBottom: 8,
+    gap: 8,
+    marginBottom: spacing.xs,
   },
-  starIcon: {
-    fontSize: 36,
-    color: '#4a5568',
-  },
-  starActive: {
-    color: '#f1c40f',
+  starTouch: {
+    padding: 4,
   },
   scoreLabel: {
-    color: '#f1c40f',
-    fontSize: 14,
-    fontWeight: 'bold',
-    marginBottom: 14,
+    fontSize: fontSizes.sm,
+    fontWeight: '700',
+    color: '#D97706',
+    marginBottom: spacing.md,
   },
   commentInput: {
     width: '100%',
-    backgroundColor: '#0f3460',
-    color: '#fff',
-    borderRadius: 8,
-    padding: 12,
-    minHeight: 80,
+    backgroundColor: colors.background,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: borderRadius.sm,
+    padding: spacing.md,
+    fontSize: fontSizes.sm,
+    color: colors.textPrimary,
+    height: 80,
     textAlignVertical: 'top',
-    marginBottom: 16,
+    marginBottom: spacing.md,
   },
   modalBtnRow: {
     flexDirection: 'row',
-    gap: 10,
+    gap: spacing.sm,
     width: '100%',
   },
   modalBtn: {
     flex: 1,
-    paddingVertical: 12,
-    borderRadius: 8,
-    alignItems: 'center',
   },
-  modalBtnText: {
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 14,
-  },
-  errorText: {
-    color: '#e74c3c',
-    fontSize: 13,
-    marginBottom: 10,
+  modalErrorText: {
+    color: colors.danger,
+    fontSize: fontSizes.xs,
+    marginBottom: spacing.sm,
   },
 });

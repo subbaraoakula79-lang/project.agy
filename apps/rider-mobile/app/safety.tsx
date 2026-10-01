@@ -6,10 +6,17 @@ import {
   TouchableOpacity,
   ScrollView,
   TextInput,
-  ActivityIndicator,
   Alert,
+  SafeAreaView,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import { colors, spacing, fontSizes, borderRadius, shadows } from './theme';
+import { AppHeader } from '../components/AppHeader';
+import { PrimaryButton } from '../components/PrimaryButton';
+import { SafetyActionCard } from '../components/SafetyActionCard';
+import { SectionHeader } from '../components/SectionHeader';
+import { BottomTabBar } from '../components/BottomTabBar';
 
 export default function RiderSafetyScreen() {
   const router = useRouter();
@@ -28,7 +35,6 @@ export default function RiderSafetyScreen() {
   const handleTriggerSos = async () => {
     setSosLoading(true);
     try {
-      // API integration call
       setSosActive(true);
       Alert.alert(
         '🚨 Emergency SOS Activated',
@@ -46,7 +52,7 @@ export default function RiderSafetyScreen() {
       const generatedToken = 'st_' + Math.random().toString(36).substring(2, 10);
       setShareToken(generatedToken);
       Alert.alert('Trip Link Generated', `Safe Share URL: /shared-trip/${generatedToken}`);
-    } catch (err: any) {
+    } catch {
       Alert.alert('Error', 'Failed to generate trip link');
     }
   };
@@ -63,251 +69,356 @@ export default function RiderSafetyScreen() {
       setSupportSubject('');
       setSupportDescription('');
       Alert.alert('Support Ticket Created', `Ticket #${ticketId} submitted to YatraSeva Support.`);
-    } catch (err: any) {
+    } catch {
       Alert.alert('Error', 'Failed to submit support ticket');
     } finally {
       setSubmittingSupport(false);
     }
   };
 
+  const handleEmergencyCall = () => {
+    Alert.alert('Emergency Quick Dial', 'Calling Kakinada Police Control: 112 / 100');
+  };
+
+  const handleSafetyTips = () => {
+    Alert.alert(
+      'YatraSeva Safety Tips',
+      '1. Always verify the vehicle plate number.\n2. Share your live trip with loved ones.\n3. Keep emergency SOS handy.\n4. Call 112 in immediate danger.',
+    );
+  };
+
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-          <Text style={styles.backText}>← Back</Text>
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Safety & Support</Text>
-      </View>
+    <SafeAreaView style={styles.safeArea}>
+      <AppHeader
+        title="Safety & SOS"
+        subtitle="24x7 Rider Protection"
+        showBack={true}
+        onBack={() => router.replace('/')}
+        showNotification={false}
+        showProfile={true}
+      />
 
-      {/* Emergency SOS Action */}
-      <View style={[styles.card, styles.sosCard]}>
-        <Text style={styles.sosCardTitle}>🚨 Emergency SOS Assistance</Text>
-        <Text style={styles.sosCardSub}>
-          Active Ride #{activeRideId}. Tap below during trip to instantly alert YatraSeva Safety Control.
-        </Text>
-
-        {sosActive ? (
-          <View style={styles.sosActiveBadge}>
-            <Text style={styles.sosActiveText}>🔴 SOS ACTIVE — Dispatch Notified</Text>
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Prominent SOS Hero Card */}
+        <View style={styles.sosCard} accessibilityLabel="Emergency SOS Section">
+          <View style={styles.sosOuterRing}>
+            <View style={styles.sosMiddleRing}>
+              <TouchableOpacity
+                style={[styles.sosButton, sosActive && styles.sosButtonActive]}
+                onPress={handleTriggerSos}
+                disabled={sosLoading}
+                activeOpacity={0.8}
+                accessibilityRole="button"
+                accessibilityLabel="Trigger Emergency SOS"
+              >
+                <Ionicons name="warning" size={32} color={colors.surface} />
+                <Text style={styles.sosButtonText}>SOS</Text>
+              </TouchableOpacity>
+            </View>
           </View>
-        ) : (
-          <TouchableOpacity
-            style={styles.sosBtn}
-            onPress={handleTriggerSos}
-            disabled={sosLoading}
-          >
-            {sosLoading ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text style={styles.sosBtnText}>TRIGGER EMERGENCY SOS</Text>
-            )}
-          </TouchableOpacity>
-        )}
-      </View>
 
-      {/* Share Trip */}
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>🔗 Share Trip Link</Text>
-        <Text style={styles.cardSub}>
-          Share an opaque, privacy-safe live tracking link with trusted contacts.
-        </Text>
+          <Text style={styles.sosPromptText}>
+            {sosActive ? '🚨 SOS ACTIVE — DISPATCH ALERTED' : 'Tap for immediate help'}
+          </Text>
+          <Text style={styles.sosSubText}>
+            Active Ride #{activeRideId} • Alerts YatraSeva Safety Control and notifies your emergency contacts instantly.
+          </Text>
 
-        <TouchableOpacity style={styles.shareBtn} onPress={handleShareTrip}>
-          <Text style={styles.shareBtnText}>Generate Safe Share Link</Text>
-        </TouchableOpacity>
-
-        {shareToken && (
-          <View style={styles.tokenBox}>
-            <Text style={styles.tokenText}>Share Token: {shareToken}</Text>
-          </View>
-        )}
-      </View>
-
-      {/* Support Ticket Submission */}
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>💬 Create Support Ticket ({supportCategory})</Text>
-
-        <Text style={styles.label}>Subject</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Brief summary of issue"
-          placeholderTextColor="#999"
-          value={supportSubject}
-          onChangeText={setSupportSubject}
-        />
-
-        <Text style={styles.label}>Description</Text>
-        <TextInput
-          style={[styles.input, styles.textArea]}
-          placeholder="Detailed description of problem or incident"
-          placeholderTextColor="#999"
-          multiline
-          numberOfLines={4}
-          value={supportDescription}
-          onChangeText={setSupportDescription}
-        />
-
-        <TouchableOpacity
-          style={styles.submitBtn}
-          onPress={handleSubmitTicket}
-          disabled={submittingSupport}
-        >
-          {submittingSupport ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.submitBtnText}>Submit Support Ticket</Text>
+          {sosActive && (
+            <View style={styles.sosActiveBanner}>
+              <Ionicons name="radio" size={16} color={colors.danger} />
+              <Text style={styles.sosActiveBannerText}>
+                Live GPS telemetry is being broadcast to Kakinada police dispatch.
+              </Text>
+            </View>
           )}
-        </TouchableOpacity>
+        </View>
 
-        {submittedTicketId && (
-          <View style={styles.successBox}>
-            <Text style={styles.successText}>Ticket #{submittedTicketId} Submitted Successfully</Text>
+        {/* Safety Tools Grid */}
+        <SectionHeader title="Safety Features" subtitle="Proactive journey safeguards" />
+        <View style={styles.gridRow}>
+          <SafetyActionCard
+            iconName="navigate-circle-outline"
+            title="Live Location"
+            subtitle="Share real-time GPS with friends"
+            onPress={handleShareTrip}
+            accentColor={colors.primary}
+            style={styles.gridCard}
+          />
+          <SafetyActionCard
+            iconName="share-social-outline"
+            title="Trip Share"
+            subtitle="Send tracking link to contacts"
+            onPress={handleShareTrip}
+            accentColor={colors.success}
+            style={styles.gridCard}
+          />
+        </View>
+
+        <View style={styles.gridRow}>
+          <SafetyActionCard
+            iconName="call-outline"
+            title="Emergency Contacts"
+            subtitle="Quick dial police (112) or contacts"
+            onPress={handleEmergencyCall}
+            accentColor={colors.danger}
+            style={styles.gridCard}
+          />
+          <SafetyActionCard
+            iconName="shield-checkmark-outline"
+            title="Safety Tips"
+            subtitle="Ride safe guidelines & verification"
+            onPress={handleSafetyTips}
+            accentColor="#8B5CF6"
+            style={styles.gridCard}
+          />
+        </View>
+
+        {/* Share Token Banner if generated */}
+        {shareToken && (
+          <View style={styles.tokenCard}>
+            <View style={styles.tokenHeader}>
+              <Ionicons name="link" size={18} color={colors.primary} />
+              <Text style={styles.tokenTitle}>Safe Share Link Generated</Text>
+            </View>
+            <Text style={styles.tokenValue}>/shared-trip/{shareToken}</Text>
+            <Text style={styles.tokenHint}>
+              Share this secure, opaque link with family. No account required for tracking.
+            </Text>
           </View>
         )}
-      </View>
-    </ScrollView>
+
+        {/* Support Ticket Section */}
+        <SectionHeader
+          title={`Safety Support Ticket (${supportCategory})`}
+          subtitle="Report an incident or ask safety questions"
+        />
+        <View style={styles.ticketCard}>
+          <Text style={styles.inputLabel}>Subject</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Brief summary of issue (e.g., Driver driving too fast)"
+            placeholderTextColor={colors.textMuted}
+            value={supportSubject}
+            onChangeText={setSupportSubject}
+            accessibilityLabel="Support subject"
+          />
+
+          <Text style={styles.inputLabel}>Description</Text>
+          <TextInput
+            style={[styles.input, styles.textArea]}
+            placeholder="Describe what happened in detail..."
+            placeholderTextColor={colors.textMuted}
+            multiline
+            numberOfLines={4}
+            value={supportDescription}
+            onChangeText={setSupportDescription}
+            accessibilityLabel="Detailed description of problem"
+          />
+
+          <PrimaryButton
+            title="Submit Support Ticket"
+            onPress={handleSubmitTicket}
+            loading={submittingSupport}
+            style={styles.submitBtn}
+            accessibilityLabel="Submit Support Ticket"
+          />
+
+          {submittedTicketId && (
+            <View style={styles.ticketSuccessBanner}>
+              <Ionicons name="checkmark-circle" size={18} color={colors.success} />
+              <Text style={styles.ticketSuccessText}>
+                Ticket #{submittedTicketId} submitted. Safety agents will respond shortly.
+              </Text>
+            </View>
+          )}
+        </View>
+      </ScrollView>
+
+      {/* Global Bottom Navigation Bar */}
+      <BottomTabBar activeTab="safety" />
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  safeArea: {
     flex: 1,
-    backgroundColor: '#0F172A',
+    backgroundColor: colors.background,
   },
-  content: {
-    padding: 16,
+  scrollView: {
+    flex: 1,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 20,
-    marginTop: 40,
-  },
-  backBtn: {
-    marginRight: 12,
-  },
-  backText: {
-    color: '#38BDF8',
-    fontSize: 16,
-  },
-  headerTitle: {
-    color: '#F8FAFC',
-    fontSize: 20,
-    fontWeight: 'bold',
-  },
-  card: {
-    backgroundColor: '#1E293B',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: '#334155',
+  scrollContent: {
+    padding: spacing.md,
+    paddingBottom: spacing.xl,
   },
   sosCard: {
-    borderColor: '#EF4444',
-    backgroundColor: '#1E1B2E',
+    backgroundColor: colors.surface,
+    borderRadius: borderRadius.lg,
+    padding: spacing.lg,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#FECACA',
+    marginBottom: spacing.md,
+    ...shadows.card,
   },
-  sosCardTitle: {
-    color: '#EF4444',
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 6,
+  sosOuterRing: {
+    width: 140,
+    height: 140,
+    borderRadius: 70,
+    backgroundColor: colors.dangerLight,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginVertical: spacing.sm,
   },
-  sosCardSub: {
-    color: '#94A3B8',
-    fontSize: 13,
-    marginBottom: 16,
-  },
-  sosBtn: {
-    backgroundColor: '#DC2626',
-    borderRadius: 8,
-    paddingVertical: 14,
+  sosMiddleRing: {
+    width: 114,
+    height: 114,
+    borderRadius: 57,
+    backgroundColor: '#FCA5A5',
+    justifyContent: 'center',
     alignItems: 'center',
   },
-  sosBtnText: {
-    color: '#FFFFFF',
-    fontWeight: 'bold',
-    fontSize: 16,
-  },
-  sosActiveBadge: {
-    backgroundColor: '#7F1D1D',
-    borderRadius: 8,
-    padding: 12,
+  sosButton: {
+    width: 90,
+    height: 90,
+    borderRadius: 45,
+    backgroundColor: colors.danger,
+    justifyContent: 'center',
     alignItems: 'center',
+    ...shadows.elevated,
   },
-  sosActiveText: {
-    color: '#FECACA',
-    fontWeight: 'bold',
+  sosButtonActive: {
+    backgroundColor: '#991B1B',
   },
-  cardTitle: {
-    color: '#F8FAFC',
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginBottom: 6,
+  sosButtonText: {
+    color: colors.surface,
+    fontSize: fontSizes.lg,
+    fontWeight: '800',
+    letterSpacing: 1,
+    marginTop: 2,
   },
-  cardSub: {
-    color: '#94A3B8',
-    fontSize: 13,
-    marginBottom: 14,
+  sosPromptText: {
+    fontSize: fontSizes.md,
+    fontWeight: '700',
+    color: colors.danger,
+    marginTop: spacing.xs,
+    textAlign: 'center',
   },
-  shareBtn: {
-    backgroundColor: '#0284C7',
-    borderRadius: 8,
-    paddingVertical: 12,
+  sosSubText: {
+    fontSize: fontSizes.xs,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    marginTop: 4,
+    lineHeight: 18,
+    maxWidth: 280,
+  },
+  sosActiveBanner: {
+    flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: colors.dangerLight,
+    padding: spacing.sm,
+    borderRadius: borderRadius.sm,
+    marginTop: spacing.md,
+    gap: spacing.xs,
   },
-  shareBtnText: {
-    color: '#FFFFFF',
-    fontWeight: 'bold',
+  sosActiveBannerText: {
+    fontSize: fontSizes.xs,
+    color: colors.danger,
+    fontWeight: '700',
+    flex: 1,
   },
-  tokenBox: {
-    marginTop: 10,
-    backgroundColor: '#0F172A',
-    padding: 10,
-    borderRadius: 6,
+  gridRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginBottom: spacing.sm,
   },
-  tokenText: {
-    color: '#38BDF8',
-    fontSize: 13,
+  gridCard: {
+    flex: 1,
   },
-  label: {
-    color: '#CBD5E1',
-    fontSize: 12,
-    fontWeight: 'bold',
+  tokenCard: {
+    backgroundColor: colors.primaryLight,
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
+    borderWidth: 1,
+    borderColor: '#BAE6FD',
+    marginVertical: spacing.sm,
+  },
+  tokenHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
     marginBottom: 4,
-    marginTop: 10,
+  },
+  tokenTitle: {
+    fontSize: fontSizes.sm,
+    fontWeight: '700',
+    color: colors.primaryDark,
+  },
+  tokenValue: {
+    fontSize: fontSizes.xs,
+    fontWeight: '600',
+    color: colors.textPrimary,
+    backgroundColor: colors.surface,
+    padding: spacing.xs,
+    borderRadius: borderRadius.xs,
+    marginVertical: 4,
+  },
+  tokenHint: {
+    fontSize: fontSizes.xs - 1,
+    color: colors.textSecondary,
+  },
+  ticketCard: {
+    backgroundColor: colors.surface,
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    marginBottom: spacing.md,
+    ...shadows.card,
+  },
+  inputLabel: {
+    fontSize: fontSizes.xs,
+    fontWeight: '600',
+    color: colors.textSecondary,
+    marginBottom: spacing.xs,
+    marginTop: spacing.xs,
   },
   input: {
-    backgroundColor: '#0F172A',
-    borderRadius: 8,
-    padding: 12,
-    color: '#F8FAFC',
+    backgroundColor: colors.background,
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: colors.border,
+    borderRadius: borderRadius.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    fontSize: fontSizes.sm,
+    color: colors.textPrimary,
   },
   textArea: {
-    height: 90,
+    height: 80,
     textAlignVertical: 'top',
   },
   submitBtn: {
-    backgroundColor: '#16A34A',
-    borderRadius: 8,
-    paddingVertical: 12,
+    marginTop: spacing.md,
+  },
+  ticketSuccessBanner: {
+    flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 16,
+    backgroundColor: colors.successLight,
+    padding: spacing.sm,
+    borderRadius: borderRadius.sm,
+    marginTop: spacing.md,
+    gap: spacing.xs,
   },
-  submitBtnText: {
-    color: '#FFFFFF',
-    fontWeight: 'bold',
-  },
-  successBox: {
-    marginTop: 10,
-    backgroundColor: '#064E3B',
-    padding: 10,
-    borderRadius: 6,
-  },
-  successText: {
-    color: '#A7F3D0',
-    fontSize: 13,
+  ticketSuccessText: {
+    fontSize: fontSizes.xs,
+    color: colors.success,
+    fontWeight: '600',
+    flex: 1,
   },
 });

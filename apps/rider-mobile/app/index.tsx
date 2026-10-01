@@ -1,6 +1,27 @@
 import { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, ActivityIndicator, ScrollView } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TextInput,
+  TouchableOpacity,
+  ScrollView,
+  SafeAreaView,
+  KeyboardAvoidingView,
+  Platform,
+} from 'react-native';
 import * as Location from 'expo-location';
+import { Ionicons } from '@expo/vector-icons';
+import { colors, spacing, fontSizes, borderRadius, shadows, dimensions } from './theme';
+import { AppHeader } from '../components/AppHeader';
+import { PrimaryButton } from '../components/PrimaryButton';
+import { SecondaryButton } from '../components/SecondaryButton';
+import { BookingCard } from '../components/BookingCard';
+import { MapPreviewCard } from '../components/MapPreviewCard';
+import { QuickActionChip } from '../components/QuickActionChip';
+import { StatusChip } from '../components/StatusChip';
+import { SectionHeader } from '../components/SectionHeader';
+import { BottomTabBar } from '../components/BottomTabBar';
 
 interface LocationItem {
   name: string;
@@ -132,8 +153,18 @@ export default function RiderAppScreen() {
                 driver: {
                   name: 'Suresh Babu',
                   phone: '+918000000001',
-                  vehicleModel: selectedVehicle === 'BIKE' ? 'Honda Activa 6G' : selectedVehicle === 'AUTO' ? 'Bajaj RE Compact' : 'Maruti Swift Dzire',
-                  regNumber: selectedVehicle === 'BIKE' ? 'AP05AB1234' : selectedVehicle === 'AUTO' ? 'AP05CD5678' : 'AP05EF9012',
+                  vehicleModel:
+                    selectedVehicle === 'BIKE'
+                      ? 'Honda Activa 6G'
+                      : selectedVehicle === 'AUTO'
+                      ? 'Bajaj RE Compact'
+                      : 'Maruti Swift Dzire',
+                  regNumber:
+                    selectedVehicle === 'BIKE'
+                      ? 'AP05AB1234'
+                      : selectedVehicle === 'AUTO'
+                      ? 'AP05CD5678'
+                      : 'AP05EF9012',
                 },
               }
             : null,
@@ -150,655 +181,1096 @@ export default function RiderAppScreen() {
     setOtp('123456');
   };
 
+  const handleSwapLocations = () => {
+    const temp = pickup;
+    setPickup(destination);
+    setDestination(temp);
+  };
+
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.title}>🚗 YatraSeva</Text>
-      <Text style={styles.subtitle}>Rider Booking — Kakinada, AP</Text>
+    <SafeAreaView style={styles.safeArea}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={styles.keyboardContainer}
+      >
+        <AppHeader
+          title="YatraSeva"
+          subtitle="Safe Rides • Better Tomorrow"
+          showBack={step === 'OTP'}
+          onBack={() => setStep('PHONE')}
+          showNotification={Boolean(user)}
+          showProfile={Boolean(user)}
+        />
 
-      {error ? <Text style={styles.error}>{error}</Text> : null}
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          {error ? (
+            <View style={styles.errorBanner} accessibilityRole="alert">
+              <Ionicons name="alert-circle" size={18} color={colors.danger} />
+              <Text style={styles.errorText}>{error}</Text>
+            </View>
+          ) : null}
 
-      {step === 'PHONE' && (
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Rider Mobile Login</Text>
-          <Text style={styles.label}>Enter Phone Number</Text>
-          <TextInput
-            style={styles.input}
-            value={phoneNumber}
-            onChangeText={setPhoneNumber}
-            placeholder="+919000000001"
-            placeholderTextColor="#8a8a9a"
-            keyboardType="phone-pad"
-          />
-          <TouchableOpacity style={styles.button} onPress={handleRequestOtp} disabled={loading}>
-            {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Get OTP</Text>}
-          </TouchableOpacity>
-        </View>
-      )}
+          {/* STEP 1: PHONE LOGIN */}
+          {step === 'PHONE' && (
+            <View style={styles.authContainer}>
+              <View style={styles.authCard}>
+                <View style={styles.authIconCircle}>
+                  <Ionicons name="call-outline" size={28} color={colors.primary} />
+                </View>
+                <Text style={styles.authTitle}>Verify Your Mobile Number</Text>
+                <Text style={styles.authSub}>We'll send you a 6 digit OTP to verify your account</Text>
 
-      {step === 'OTP' && (
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Verify OTP</Text>
-          <Text style={styles.info}>OTP sent to {phoneNumber}</Text>
-          <Text style={styles.label}>Development Test OTP: 123456</Text>
-          <TextInput
-            style={styles.input}
-            value={otp}
-            onChangeText={setOtp}
-            placeholder="123456"
-            placeholderTextColor="#8a8a9a"
-            keyboardType="number-pad"
-            maxLength={6}
-          />
-          <TouchableOpacity style={styles.button} onPress={handleVerifyOtp} disabled={loading}>
-            {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Verify & Login</Text>}
-          </TouchableOpacity>
-        </View>
-      )}
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>Mobile Number</Text>
+                  <View style={styles.phoneInputRow}>
+                    <View style={styles.countryCodeBadge}>
+                      <Text style={styles.countryCodeText}>+91</Text>
+                    </View>
+                    <TextInput
+                      style={styles.phoneInput}
+                      value={phoneNumber.replace('+91', '')}
+                      onChangeText={(val) => setPhoneNumber(`+91${val.replace(/\D/g, '')}`)}
+                      placeholder="9000000001"
+                      placeholderTextColor={colors.textMuted}
+                      keyboardType="phone-pad"
+                      maxLength={10}
+                      accessibilityLabel="Enter 10-digit mobile number"
+                    />
+                  </View>
+                </View>
 
-      {step === 'BOOKING' && user && (
-        <View style={styles.bookingContainer}>
-          {/* Header */}
-          <View style={styles.headerRow}>
-            <Text style={styles.welcomeText}>Hi, {user.name} 👋</Text>
-            <TouchableOpacity style={styles.smallLogoutBtn} onPress={handleLogout}>
-              <Text style={styles.smallLogoutText}>Logout</Text>
-            </TouchableOpacity>
-          </View>
+                <PrimaryButton
+                  title="Send OTP"
+                  onPress={handleRequestOtp}
+                  loading={loading}
+                  style={styles.authButton}
+                  accessibilityLabel="Send OTP verification code"
+                />
 
-          {/* Map Preview */}
-          <View style={styles.mapCard}>
-            <Text style={styles.mapTitle}>🗺️ Kakinada Route Preview</Text>
-            <Text style={styles.mapSub}>Pickup: 🟢 {pickup.name}</Text>
-            <Text style={styles.mapSub}>Drop: 🔴 {destination.name}</Text>
-            <Text style={styles.mapSub}>Distance: ~5.35 km | Est: 13 mins</Text>
-            <Text style={styles.mapSub}>
-              📡 Rider GPS: {gpsPermission === 'GRANTED' && currentGps ? `Active (${currentGps.lat.toFixed(4)}, ${currentGps.lng.toFixed(4)})` : 'Permission Pending/Denied'}
-            </Text>
-            {locationFreshness !== 'FRESH' && (
-              <View style={{ marginTop: 8, padding: 6, backgroundColor: '#e74c3c22', borderRadius: 4 }}>
-                <Text style={{ color: '#e74c3c', fontSize: 12, fontWeight: '600' }}>
-                  ⚠️ Driver location updating... ({locationFreshness})
+                <Text style={styles.termsText}>
+                  By continuing, you agree to our Terms of Service & Privacy Policy
                 </Text>
               </View>
-            )}
-          </View>
-
-          {/* Pickup Picker */}
-          <Text style={styles.sectionLabel}>Select Pickup Location</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipRow}>
-            {KAKINADA_LOCATIONS.map((loc) => (
-              <TouchableOpacity
-                key={loc.name}
-                style={[styles.chip, pickup.name === loc.name && styles.chipActive]}
-                onPress={() => setPickup(loc)}
-              >
-                <Text style={[styles.chipText, pickup.name === loc.name && styles.chipTextActive]}>
-                  📍 {loc.name}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-
-          {/* Destination Picker */}
-          <Text style={styles.sectionLabel}>Select Destination</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipRow}>
-            {KAKINADA_LOCATIONS.map((loc) => (
-              <TouchableOpacity
-                key={loc.name}
-                style={[styles.chip, destination.name === loc.name && styles.chipActive]}
-                onPress={() => setDestination(loc)}
-              >
-                <Text style={[styles.chipText, destination.name === loc.name && styles.chipTextActive]}>
-                  🏁 {loc.name}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-
-          {/* Vehicle Type Picker */}
-          <Text style={styles.sectionLabel}>Select Vehicle</Text>
-          <View style={styles.vehicleRow}>
-            {(['BIKE', 'AUTO', 'CAB'] as const).map((vt) => (
-              <TouchableOpacity
-                key={vt}
-                style={[styles.vehicleCard, selectedVehicle === vt && styles.vehicleCardActive]}
-                onPress={() => setSelectedVehicle(vt)}
-              >
-                <Text style={styles.vehicleIcon}>{vt === 'BIKE' ? '🏍️' : vt === 'AUTO' ? '🛺' : '🚗'}</Text>
-                <Text style={styles.vehicleFare}>₹{vt === 'BIKE' ? 76 : vt === 'AUTO' ? 108 : 164}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-
-          {/* Payment Method Picker */}
-          <Text style={styles.sectionLabel}>Select Payment Method</Text>
-          <View style={styles.vehicleRow}>
-            {(['CASH', 'UPI'] as const).map((pm) => (
-              <TouchableOpacity
-                key={pm}
-                style={[styles.vehicleCard, paymentMethod === pm && styles.vehicleCardActive]}
-                onPress={() => setPaymentMethod(pm)}
-              >
-                <Text style={styles.vehicleIcon}>{pm === 'CASH' ? '💵' : '📱'}</Text>
-                <Text style={styles.vehicleName}>{pm}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-
-          {/* Confirm Ride Button */}
-          <TouchableOpacity style={styles.confirmBtn} onPress={() => handleBookRide(false)} disabled={loading}>
-            <Text style={styles.confirmBtnText}>Request {selectedVehicle} Ride</Text>
-          </TouchableOpacity>
-        </View>
-      )}
-
-      {step === 'SEARCHING' && currentRide && (
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Finding Your Captain...</Text>
-          <View style={[styles.statusBadge, { backgroundColor: '#f39c12' }]}>
-            <Text style={styles.statusText}>STATUS: SEARCHING_DRIVER</Text>
-          </View>
-          <ActivityIndicator size="large" color="#f39c12" style={{ marginVertical: 20 }} />
-          <Text style={styles.info}>Searching nearby captains in Kakinada...</Text>
-          <View style={styles.rideDetailBox}>
-            <Text style={styles.rideDetailText}>🆔 Ride ID: {currentRide.id}</Text>
-            <Text style={styles.rideDetailText}>🚙 Vehicle: {currentRide.vehicleType}</Text>
-            <Text style={styles.rideDetailText}>🟢 Pickup: {currentRide.pickupAddress}</Text>
-            <Text style={styles.rideDetailText}>🔴 Drop: {currentRide.dropAddress}</Text>
-            <Text style={styles.rideDetailText}>💰 Fare: ₹{currentRide.estimatedFare}</Text>
-          </View>
-        </View>
-      )}
-
-      {step === 'ASSIGNED' && currentRide && (
-        <View style={styles.card}>
-          {currentRide.status === 'DRIVER_ASSIGNED' && (
-            <>
-              <Text style={styles.cardTitle}>Captain Assigned! 🚖</Text>
-              <View style={[styles.statusBadge, { backgroundColor: '#27ae60' }]}>
-                <Text style={styles.statusText}>STATUS: DRIVER_ASSIGNED</Text>
-              </View>
-              <Text style={styles.info}>Captain has accepted your booking and is preparing to arrive.</Text>
-            </>
-          )}
-
-          {currentRide.status === 'DRIVER_ARRIVING' && (
-            <>
-              <Text style={styles.cardTitle}>Captain On The Way! 🚗</Text>
-              <View style={[styles.statusBadge, { backgroundColor: '#3498db' }]}>
-                <Text style={styles.statusText}>STATUS: DRIVER_ARRIVING</Text>
-              </View>
-              <Text style={styles.info}>Captain is navigating to your pickup location.</Text>
-            </>
-          )}
-
-          {currentRide.status === 'DRIVER_ARRIVED' && (
-            <>
-              <Text style={styles.cardTitle}>Captain Has Arrived! 📍</Text>
-              <View style={[styles.statusBadge, { backgroundColor: '#9b59b6' }]}>
-                <Text style={styles.statusText}>STATUS: DRIVER_ARRIVED</Text>
-              </View>
-              <Text style={styles.info}>Captain is waiting at the pickup location. Please board the vehicle.</Text>
-            </>
-          )}
-
-          {currentRide.status === 'RIDE_STARTED' && (
-            <>
-              <Text style={styles.cardTitle}>Trip In Progress 🛣️</Text>
-              <View style={[styles.statusBadge, { backgroundColor: '#2980b9' }]}>
-                <Text style={styles.statusText}>STATUS: RIDE_STARTED</Text>
-              </View>
-              <Text style={styles.info}>Heading towards {currentRide.dropAddress}. Have a safe ride!</Text>
-            </>
-          )}
-
-          {currentRide.status === 'RIDE_COMPLETED' && (
-            <>
-              <Text style={styles.cardTitle}>Trip Completed! 🏁</Text>
-              <View style={[styles.statusBadge, { backgroundColor: '#2ecc71' }]}>
-                <Text style={styles.statusText}>STATUS: RIDE_COMPLETED</Text>
-              </View>
-              <Text style={styles.info}>You have arrived at your destination.</Text>
-            </>
-          )}
-
-          {currentRide.status === 'COMPLETED' && (
-            <>
-              <Text style={styles.cardTitle}>Trip Completed & Paid! 🎉</Text>
-              <View style={[styles.statusBadge, { backgroundColor: '#2ecc71' }]}>
-                <Text style={styles.statusText}>STATUS: COMPLETED</Text>
-              </View>
-              <Text style={[styles.info, { color: '#2ecc71', fontWeight: 'bold' }]}>
-                Payment of ₹{currentRide.estimatedFare} ({currentRide.paymentMethod}) was successfully settled!
-              </Text>
-            </>
-          )}
-
-          {currentRide.status === 'PAYMENT_FAILED' && (
-            <>
-              <Text style={styles.cardTitle}>Payment Failed ⚠️</Text>
-              <View style={[styles.statusBadge, { backgroundColor: '#e74c3c' }]}>
-                <Text style={styles.statusText}>STATUS: PAYMENT_FAILED</Text>
-              </View>
-              <Text style={[styles.info, { color: '#ff6b6b' }]}>
-                Mock UPI transaction failed. Please retry payment or switch to Cash.
-              </Text>
-            </>
-          )}
-
-          {currentRide.status === 'PAYMENT_PENDING' && (
-            <>
-              <Text style={styles.cardTitle}>Payment Pending ⏳</Text>
-              <View style={[styles.statusBadge, { backgroundColor: '#e67e22' }]}>
-                <Text style={styles.statusText}>STATUS: PAYMENT_PENDING</Text>
-              </View>
-              <Text style={[styles.info, { color: '#f39c12' }]}>
-                Trip finished! Total fare: ₹{currentRide.estimatedFare} ({currentRide.paymentMethod}).
-              </Text>
-            </>
-          )}
-
-          {currentRide.driver && (
-            <View style={styles.driverCard}>
-              <Text style={styles.driverName}>Captain: {currentRide.driver.name}</Text>
-              <Text style={styles.driverPhone}>📞 Phone: {currentRide.driver.phone}</Text>
-              <Text style={styles.driverVehicle}>🛺 Vehicle: {currentRide.driver.vehicleModel}</Text>
-              <Text style={styles.driverReg}>🔢 Plate: {currentRide.driver.regNumber}</Text>
             </View>
           )}
 
-          <View style={styles.rideDetailBox}>
-            <Text style={styles.rideDetailText}>🆔 Ride ID: {currentRide.id}</Text>
-            <Text style={styles.rideDetailText}>🟢 Pickup: {currentRide.pickupAddress}</Text>
-            <Text style={styles.rideDetailText}>🔴 Drop: {currentRide.dropAddress}</Text>
-            <Text style={styles.rideDetailText}>💰 Fare: ₹{currentRide.estimatedFare}</Text>
-            <Text style={styles.rideDetailText}>💳 Method: {currentRide.paymentMethod}</Text>
-          </View>
-
-          {/* Payment Interactive Actions for Rider */}
-          {(currentRide.status === 'PAYMENT_PENDING' || currentRide.status === 'PAYMENT_FAILED') && (
-            <View style={{ width: '100%', marginTop: 10, gap: 10 }}>
-              {currentRide.paymentMethod === 'CASH' ? (
-                <View style={{ backgroundColor: '#0f3460', padding: 12, borderRadius: 8, alignItems: 'center' }}>
-                  <Text style={{ color: '#eaeaea', fontSize: 13, textAlign: 'center', marginBottom: 8 }}>
-                    💵 Please hand ₹{currentRide.estimatedFare} cash to Captain {currentRide.driver?.name || ''}.
-                    Captain will confirm cash collection on their app.
-                  </Text>
-                  <TouchableOpacity
-                    style={[styles.smallLogoutBtn, { backgroundColor: '#3498db' }]}
-                    onPress={() => setCurrentRide((prev) => (prev ? { ...prev, paymentMethod: 'UPI' } : null))}
-                  >
-                    <Text style={styles.smallLogoutText}>Switch to Mock UPI Payment 📱</Text>
-                  </TouchableOpacity>
+          {/* STEP 2: OTP VERIFICATION */}
+          {step === 'OTP' && (
+            <View style={styles.authContainer}>
+              <View style={styles.authCard}>
+                <View style={styles.authIconCircle}>
+                  <Ionicons name="shield-checkmark-outline" size={28} color={colors.primary} />
                 </View>
-              ) : (
-                <View style={{ backgroundColor: '#0f3460', padding: 12, borderRadius: 8, alignItems: 'center' }}>
-                  <Text style={{ color: '#eaeaea', fontSize: 13, textAlign: 'center', marginBottom: 10 }}>
-                    📱 Pay ₹{currentRide.estimatedFare} via Mock UPI (Google Pay / PhonePe / Paytm)
+                <Text style={styles.authTitle}>Enter Verification Code</Text>
+                <Text style={styles.authSub}>OTP sent to {phoneNumber}</Text>
+
+                <View style={styles.devHintBox}>
+                  <Ionicons name="information-circle-outline" size={16} color={colors.primary} />
+                  <Text style={styles.devHintText}>Development Test OTP: 123456</Text>
+                </View>
+
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>6-Digit OTP</Text>
+                  <TextInput
+                    style={styles.otpInput}
+                    value={otp}
+                    onChangeText={setOtp}
+                    placeholder="123456"
+                    placeholderTextColor={colors.textMuted}
+                    keyboardType="number-pad"
+                    maxLength={6}
+                    accessibilityLabel="Enter 6-digit OTP code"
+                  />
+                </View>
+
+                <PrimaryButton
+                  title="Verify & Continue"
+                  onPress={handleVerifyOtp}
+                  loading={loading}
+                  style={styles.authButton}
+                  accessibilityLabel="Verify OTP and Login"
+                />
+
+                <TouchableOpacity
+                  style={styles.resendBtn}
+                  onPress={handleRequestOtp}
+                  accessibilityRole="button"
+                  accessibilityLabel="Resend OTP code"
+                >
+                  <Text style={styles.resendText}>Didn't receive code? Resend OTP</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
+
+          {/* STEP 3: BOOKING SCREEN */}
+          {step === 'BOOKING' && user && (
+            <View style={styles.bookingContainer}>
+              {/* Greeting Section */}
+              <View style={styles.greetingSection}>
+                <View>
+                  <Text style={styles.greetingSub}>Hi, {user.name} 👋</Text>
+                  <Text style={styles.greetingTitle}>Where are you going today?</Text>
+                </View>
+                <TouchableOpacity
+                  style={styles.logoutPill}
+                  onPress={handleLogout}
+                  accessibilityRole="button"
+                  accessibilityLabel="Log out of rider account"
+                >
+                  <Ionicons name="log-out-outline" size={14} color={colors.danger} />
+                  <Text style={styles.logoutPillText}>Logout</Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* Booking Card */}
+              <BookingCard
+                pickupLocation={pickup.name}
+                dropLocation={destination.name}
+                onSwapLocations={handleSwapLocations}
+                onCtaPress={() => handleBookRide(false)}
+                ctaTitle={`Request ${selectedVehicle} Ride`}
+                ctaLoading={loading}
+                style={styles.cardSpacing}
+              />
+
+              {/* Map Preview Card */}
+              <MapPreviewCard
+                pickupName={pickup.name}
+                dropName={destination.name}
+                distanceText="5.35 km"
+                durationText="13 mins"
+                gpsActive={gpsPermission === 'GRANTED'}
+                gpsCoordinates={currentGps}
+                style={styles.cardSpacing}
+              />
+
+              {locationFreshness !== 'FRESH' && (
+                <View style={styles.freshnessNotice}>
+                  <Ionicons name="cloud-download-outline" size={14} color={colors.warning} />
+                  <Text style={styles.freshnessNoticeText}>
+                    Updating GPS telemetry... ({locationFreshness})
                   </Text>
-                  <TouchableOpacity
-                    style={[styles.button, { backgroundColor: '#27ae60', marginBottom: 8 }]}
+                </View>
+              )}
+
+              {/* Quick Actions */}
+              <SectionHeader title="Saved & Quick Places" />
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                style={styles.horizontalScroll}
+                contentContainerStyle={styles.chipsContainer}
+              >
+                <QuickActionChip
+                  label="Railway Station"
+                  iconName="train-outline"
+                  onPress={() => setPickup(KAKINADA_LOCATIONS[0]!)}
+                  isActive={pickup.name === KAKINADA_LOCATIONS[0]!.name}
+                />
+                <QuickActionChip
+                  label="Work / JNTU"
+                  iconName="briefcase-outline"
+                  onPress={() => setDestination(KAKINADA_LOCATIONS[5]!)}
+                  isActive={destination.name === KAKINADA_LOCATIONS[5]!.name}
+                />
+                <QuickActionChip
+                  label="Beach Road"
+                  iconName="water-outline"
+                  onPress={() => setDestination(KAKINADA_LOCATIONS[2]!)}
+                  isActive={destination.name === KAKINADA_LOCATIONS[2]!.name}
+                />
+                <QuickActionChip
+                  label="Bhanugudi"
+                  iconName="bookmark-outline"
+                  onPress={() => setDestination(KAKINADA_LOCATIONS[4]!)}
+                  isActive={destination.name === KAKINADA_LOCATIONS[4]!.name}
+                />
+              </ScrollView>
+
+              {/* Vehicle Type Selector */}
+              <SectionHeader title="Choose Vehicle" subtitle="Transparent Kakinada fares" />
+              <View style={styles.vehicleGrid}>
+                {(
+                  [
+                    { type: 'BIKE', name: 'Bike', fare: 76, eta: '3 min', icon: 'bicycle-outline' as const },
+                    { type: 'AUTO', name: 'Auto', fare: 108, eta: '5 min', icon: 'navigate-outline' as const },
+                    { type: 'CAB', name: 'Cab', fare: 164, eta: '8 min', icon: 'car-outline' as const },
+                  ] as const
+                ).map((v) => {
+                  const isSelected = selectedVehicle === v.type;
+                  return (
+                    <TouchableOpacity
+                      key={v.type}
+                      style={[
+                        styles.vehicleOptionCard,
+                        isSelected && styles.vehicleOptionCardActive,
+                      ]}
+                      onPress={() => setSelectedVehicle(v.type)}
+                      activeOpacity={0.7}
+                      accessibilityRole="button"
+                      accessibilityLabel={`${v.name}, ₹${v.fare}, ETA ${v.eta}`}
+                      accessibilityState={{ selected: isSelected }}
+                    >
+                      <View style={styles.vehicleIconCircle}>
+                        <Ionicons
+                          name={v.icon}
+                          size={24}
+                          color={isSelected ? colors.primary : colors.textPrimary}
+                        />
+                      </View>
+                      <Text style={[styles.vehicleName, isSelected && styles.vehicleTextActive]}>
+                        {v.name}
+                      </Text>
+                      <Text style={[styles.vehicleFare, isSelected && styles.vehicleFareActive]}>
+                        ₹{v.fare}
+                      </Text>
+                      <Text style={styles.vehicleEta}>{v.eta}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+
+              {/* Payment Method Selector */}
+              <SectionHeader title="Payment Method" />
+              <View style={styles.paymentRow}>
+                {(['CASH', 'UPI'] as const).map((pm) => {
+                  const isSelected = paymentMethod === pm;
+                  return (
+                    <TouchableOpacity
+                      key={pm}
+                      style={[
+                        styles.paymentOptionCard,
+                        isSelected && styles.paymentOptionCardActive,
+                      ]}
+                      onPress={() => setPaymentMethod(pm)}
+                      activeOpacity={0.7}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Pay via ${pm}`}
+                      accessibilityState={{ selected: isSelected }}
+                    >
+                      <Ionicons
+                        name={pm === 'CASH' ? 'cash-outline' : 'qr-code-outline'}
+                        size={20}
+                        color={isSelected ? colors.primary : colors.textSecondary}
+                      />
+                      <Text
+                        style={[
+                          styles.paymentName,
+                          isSelected && styles.paymentNameActive,
+                        ]}
+                      >
+                        {pm === 'CASH' ? 'Cash to Captain' : 'UPI / Online'}
+                      </Text>
+                      {isSelected && (
+                        <Ionicons name="checkmark-circle" size={18} color={colors.primary} />
+                      )}
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
+          )}
+
+          {/* STEP 4: SEARCHING DRIVER */}
+          {step === 'SEARCHING' && currentRide && (
+            <View style={styles.searchingContainer}>
+              <View style={styles.stateCard}>
+                <View style={styles.stateIconCircle}>
+                  <Ionicons name="search" size={28} color={colors.primary} />
+                </View>
+                <Text style={styles.stateTitle}>Finding Your Captain...</Text>
+                <Text style={styles.stateSub}>Searching nearby verified captains in Kakinada</Text>
+
+                <View style={styles.statusChipWrapper}>
+                  <StatusChip status={currentRide.status} />
+                </View>
+
+                {/* Ride Summary Box */}
+                <View style={styles.detailSummaryBox}>
+                  <View style={styles.summaryItem}>
+                    <Text style={styles.summaryLabel}>Vehicle</Text>
+                    <Text style={styles.summaryValue}>{currentRide.vehicleType}</Text>
+                  </View>
+                  <View style={styles.summaryItem}>
+                    <Text style={styles.summaryLabel}>Estimated Fare</Text>
+                    <Text style={styles.summaryValue}>₹{currentRide.estimatedFare}</Text>
+                  </View>
+                  <View style={styles.summaryItem}>
+                    <Text style={styles.summaryLabel}>Payment</Text>
+                    <Text style={styles.summaryValue}>{currentRide.paymentMethod}</Text>
+                  </View>
+                </View>
+
+                <SecondaryButton
+                  title="Cancel Request"
+                  variant="outline"
+                  onPress={() => {
+                    setCurrentRide(null);
+                    setStep('BOOKING');
+                  }}
+                  style={styles.cancelBtn}
+                />
+              </View>
+
+              <MapPreviewCard
+                pickupName={currentRide.pickupAddress}
+                dropName={currentRide.dropAddress}
+                style={styles.cardSpacing}
+              />
+            </View>
+          )}
+
+          {/* STEP 5: ASSIGNED / IN PROGRESS / COMPLETED */}
+          {step === 'ASSIGNED' && currentRide && (
+            <View style={styles.assignedContainer}>
+              <View style={styles.stateCard}>
+                <View style={styles.assignedHeaderRow}>
+                  <View>
+                    <Text style={styles.tripStatusTitle}>
+                      {currentRide.status === 'DRIVER_ASSIGNED' && 'Captain Assigned! 🚖'}
+                      {currentRide.status === 'DRIVER_ARRIVING' && 'Captain On The Way 🚗'}
+                      {currentRide.status === 'DRIVER_ARRIVED' && 'Captain Has Arrived 📍'}
+                      {currentRide.status === 'RIDE_STARTED' && 'Trip In Progress 🛣️'}
+                      {currentRide.status === 'RIDE_COMPLETED' && 'Arrived at Destination 🏁'}
+                      {currentRide.status === 'PAYMENT_PENDING' && 'Payment Pending ⏳'}
+                      {currentRide.status === 'COMPLETED' && 'Trip Completed & Settled 🎉'}
+                      {currentRide.status === 'PAYMENT_FAILED' && 'Payment Failed ⚠️'}
+                    </Text>
+                    <Text style={styles.tripStatusSub}>Ride #{currentRide.id}</Text>
+                  </View>
+                  <StatusChip status={currentRide.status} />
+                </View>
+
+                {/* Driver Profile Card */}
+                {currentRide.driver && (
+                  <View style={styles.driverProfileBox}>
+                    <View style={styles.driverAvatar}>
+                      <Ionicons name="person" size={26} color={colors.primary} />
+                    </View>
+                    <View style={styles.driverMeta}>
+                      <Text style={styles.driverName}>{currentRide.driver.name}</Text>
+                      <Text style={styles.driverVehicle}>
+                        {currentRide.driver.vehicleModel} • {currentRide.driver.regNumber}
+                      </Text>
+                    </View>
+                    <View style={styles.driverActions}>
+                      <TouchableOpacity
+                        style={styles.driverActionBtn}
+                        accessibilityLabel="Call Captain"
+                        accessibilityRole="button"
+                      >
+                        <Ionicons name="call" size={18} color={colors.success} />
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={styles.driverActionBtn}
+                        accessibilityLabel="Message Captain"
+                        accessibilityRole="button"
+                      >
+                        <Ionicons name="chatbubble-ellipses" size={18} color={colors.primary} />
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                )}
+
+                {/* Locations Summary */}
+                <View style={styles.detailSummaryBox}>
+                  <View style={styles.locationSummaryRow}>
+                    <View style={styles.pickupDotSmall} />
+                    <Text style={styles.locationSummaryText} numberOfLines={1}>
+                      {currentRide.pickupAddress}
+                    </Text>
+                  </View>
+                  <View style={styles.locationDivider} />
+                  <View style={styles.locationSummaryRow}>
+                    <View style={styles.dropSquareSmall} />
+                    <Text style={styles.locationSummaryText} numberOfLines={1}>
+                      {currentRide.dropAddress}
+                    </Text>
+                  </View>
+                </View>
+
+                {/* Interactive Payment Actions */}
+                {(currentRide.status === 'PAYMENT_PENDING' || currentRide.status === 'PAYMENT_FAILED') && (
+                  <View style={styles.paymentActionsBox}>
+                    <Text style={styles.paymentActionTitle}>
+                      Total Fare: ₹{currentRide.estimatedFare} ({currentRide.paymentMethod})
+                    </Text>
+                    {currentRide.paymentMethod === 'CASH' ? (
+                      <View style={styles.cashInstructions}>
+                        <Text style={styles.cashText}>
+                          💵 Please pay ₹{currentRide.estimatedFare} cash to Captain {currentRide.driver?.name}.
+                        </Text>
+                        <SecondaryButton
+                          title="Switch to UPI Payment"
+                          onPress={() => setCurrentRide((prev) => (prev ? { ...prev, paymentMethod: 'UPI' } : null))}
+                          style={styles.switchMethodBtn}
+                        />
+                      </View>
+                    ) : (
+                      <View style={styles.upiActions}>
+                        <PrimaryButton
+                          title={`Pay ₹${currentRide.estimatedFare} via UPI`}
+                          onPress={() => {
+                            setLoading(true);
+                            setTimeout(() => {
+                              setLoading(false);
+                              setCurrentRide((prev) => (prev ? { ...prev, status: 'COMPLETED' } : null));
+                            }, 1200);
+                          }}
+                          loading={loading}
+                          variant="success"
+                          style={styles.upiPayBtn}
+                        />
+                        <SecondaryButton
+                          title="Simulate UPI Failure"
+                          variant="danger"
+                          onPress={() => setCurrentRide((prev) => (prev ? { ...prev, status: 'PAYMENT_FAILED' } : null))}
+                        />
+                      </View>
+                    )}
+                  </View>
+                )}
+
+                {/* Ride Cancellation if allowed */}
+                {(currentRide.status === 'DRIVER_ASSIGNED' || currentRide.status === 'DRIVER_ARRIVING') && (
+                  <SecondaryButton
+                    title="Cancel Ride"
+                    variant="danger"
                     onPress={() => {
-                      setLoading(true);
-                      setTimeout(() => {
-                        setLoading(false);
-                        setCurrentRide((prev) => (prev ? { ...prev, status: 'COMPLETED' } : null));
-                      }, 1200);
+                      setCurrentRide((prev) => (prev ? { ...prev, status: 'CANCELLED_BY_RIDER' } : null));
+                      setError('Ride cancelled by you.');
+                      setTimeout(() => setStep('BOOKING'), 1200);
                     }}
-                  >
-                    {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Pay ₹{currentRide.estimatedFare} Now (UPI) ✅</Text>}
-                  </TouchableOpacity>
+                    style={styles.actionBtnMargin}
+                  />
+                )}
 
-                  <TouchableOpacity
-                    style={[styles.smallLogoutBtn, { backgroundColor: '#e74c3c' }]}
-                    onPress={() => setCurrentRide((prev) => (prev ? { ...prev, status: 'PAYMENT_FAILED' } : null))}
-                  >
-                    <Text style={styles.smallLogoutText}>Simulate UPI Payment Failure 🧪</Text>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    style={[styles.smallLogoutBtn, { backgroundColor: '#f39c12', marginTop: 6 }]}
-                    onPress={() => setCurrentRide((prev) => (prev ? { ...prev, paymentMethod: 'CASH' } : null))}
-                  >
-                    <Text style={styles.smallLogoutText}>Switch to Cash 💵</Text>
-                  </TouchableOpacity>
+                {/* Dev Simulation Controls */}
+                <View style={styles.devSimulationPanel}>
+                  <Text style={styles.devSimTitle}>🧪 Dev Simulation: Advance State</Text>
+                  <View style={styles.simButtonsRow}>
+                    {currentRide.status === 'DRIVER_ASSIGNED' && (
+                      <TouchableOpacity
+                        style={styles.simPill}
+                        onPress={() => setCurrentRide((prev) => (prev ? { ...prev, status: 'DRIVER_ARRIVING' } : null))}
+                      >
+                        <Text style={styles.simPillText}>Arriving ⏩</Text>
+                      </TouchableOpacity>
+                    )}
+                    {currentRide.status === 'DRIVER_ARRIVING' && (
+                      <TouchableOpacity
+                        style={styles.simPill}
+                        onPress={() => setCurrentRide((prev) => (prev ? { ...prev, status: 'DRIVER_ARRIVED' } : null))}
+                      >
+                        <Text style={styles.simPillText}>Arrived ⏩</Text>
+                      </TouchableOpacity>
+                    )}
+                    {currentRide.status === 'DRIVER_ARRIVED' && (
+                      <TouchableOpacity
+                        style={styles.simPill}
+                        onPress={() => setCurrentRide((prev) => (prev ? { ...prev, status: 'RIDE_STARTED' } : null))}
+                      >
+                        <Text style={styles.simPillText}>Start Trip ⏩</Text>
+                      </TouchableOpacity>
+                    )}
+                    {currentRide.status === 'RIDE_STARTED' && (
+                      <TouchableOpacity
+                        style={styles.simPill}
+                        onPress={() => setCurrentRide((prev) => (prev ? { ...prev, status: 'PAYMENT_PENDING' } : null))}
+                      >
+                        <Text style={styles.simPillText}>End Trip ⏩</Text>
+                      </TouchableOpacity>
+                    )}
+                    {currentRide.status === 'PAYMENT_PENDING' && (
+                      <TouchableOpacity
+                        style={styles.simPill}
+                        onPress={() => setCurrentRide((prev) => (prev ? { ...prev, status: 'COMPLETED' } : null))}
+                      >
+                        <Text style={styles.simPillText}>Confirm Cash (Captain) ⏩</Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
                 </View>
-              )}
+
+                {currentRide.status === 'COMPLETED' && (
+                  <PrimaryButton
+                    title="Book Another Ride"
+                    onPress={() => setStep('BOOKING')}
+                    style={styles.actionBtnMargin}
+                  />
+                )}
+              </View>
+
+              <MapPreviewCard
+                pickupName={currentRide.pickupAddress}
+                dropName={currentRide.dropAddress}
+                style={styles.cardSpacing}
+              />
             </View>
           )}
 
-          {/* Cancellation Control — Allowed only before arrival */}
-          {(currentRide.status === 'DRIVER_ASSIGNED' || currentRide.status === 'DRIVER_ARRIVING') && (
-            <TouchableOpacity
-              style={[styles.button, { backgroundColor: '#c0392b', marginTop: 12 }]}
-              onPress={() => {
-                setCurrentRide((prev) => (prev ? { ...prev, status: 'CANCELLED_BY_RIDER' } : null));
-                setError('Ride cancelled by you.');
-                setTimeout(() => setStep('BOOKING'), 1500);
-              }}
-            >
-              <Text style={styles.buttonText}>Cancel Ride</Text>
-            </TouchableOpacity>
-          )}
+          {/* STEP 6: NO DRIVER */}
+          {step === 'NO_DRIVER' && currentRide && (
+            <View style={styles.noDriverContainer}>
+              <View style={styles.stateCard}>
+                <View style={[styles.stateIconCircle, { backgroundColor: colors.dangerLight }]}>
+                  <Ionicons name="car-outline" size={28} color={colors.danger} />
+                </View>
+                <Text style={styles.stateTitle}>No Captains Available</Text>
+                <Text style={styles.stateSub}>
+                  All captains in Kakinada are currently occupied. Please try again in a few moments.
+                </Text>
 
-          {currentRide.status === 'DRIVER_ARRIVED' && (
-            <Text style={[styles.info, { fontSize: 12, color: '#e74c3c', marginTop: 8 }]}>
-              ⚠️ Cancellation restricted: Captain has already arrived.
-            </Text>
-          )}
+                <View style={styles.statusChipWrapper}>
+                  <StatusChip status="CANCELLED_NO_DRIVER" />
+                </View>
 
-          {/* Test State Advancement Simulator Controls for Development */}
-          <View style={{ marginTop: 16, width: '100%', borderTopWidth: 1, borderTopColor: '#0f3460', paddingTop: 10 }}>
-            <Text style={{ color: '#8a8a9a', fontSize: 11, textAlign: 'center', marginBottom: 8 }}>
-              🧪 Dev Simulation: Advance State
-            </Text>
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 6 }}>
-              {currentRide.status === 'DRIVER_ASSIGNED' && (
-                <TouchableOpacity
-                  style={[styles.smallLogoutBtn, { backgroundColor: '#2980b9' }]}
-                  onPress={() => setCurrentRide((prev) => (prev ? { ...prev, status: 'DRIVER_ARRIVING' } : null))}
-                >
-                  <Text style={styles.smallLogoutText}>Arriving ⏩</Text>
-                </TouchableOpacity>
-              )}
-              {currentRide.status === 'DRIVER_ARRIVING' && (
-                <TouchableOpacity
-                  style={[styles.smallLogoutBtn, { backgroundColor: '#8e44ad' }]}
-                  onPress={() => setCurrentRide((prev) => (prev ? { ...prev, status: 'DRIVER_ARRIVED' } : null))}
-                >
-                  <Text style={styles.smallLogoutText}>Arrived ⏩</Text>
-                </TouchableOpacity>
-              )}
-              {currentRide.status === 'DRIVER_ARRIVED' && (
-                <TouchableOpacity
-                  style={[styles.smallLogoutBtn, { backgroundColor: '#16a085' }]}
-                  onPress={() => setCurrentRide((prev) => (prev ? { ...prev, status: 'RIDE_STARTED' } : null))}
-                >
-                  <Text style={styles.smallLogoutText}>Start Trip ⏩</Text>
-                </TouchableOpacity>
-              )}
-              {currentRide.status === 'RIDE_STARTED' && (
-                <TouchableOpacity
-                  style={[styles.smallLogoutBtn, { backgroundColor: '#d35400' }]}
-                  onPress={() => setCurrentRide((prev) => (prev ? { ...prev, status: 'PAYMENT_PENDING' } : null))}
-                >
-                  <Text style={styles.smallLogoutText}>Complete Trip ⏩</Text>
-                </TouchableOpacity>
-              )}
-              {currentRide.status === 'PAYMENT_PENDING' && (
-                <TouchableOpacity
-                  style={[styles.smallLogoutBtn, { backgroundColor: '#27ae60' }]}
-                  onPress={() => setCurrentRide((prev) => (prev ? { ...prev, status: 'COMPLETED' } : null))}
-                >
-                  <Text style={styles.smallLogoutText}>Confirm Cash (Captain) ⏩</Text>
-                </TouchableOpacity>
-              )}
+                <PrimaryButton
+                  title="Try Again"
+                  onPress={() => setStep('BOOKING')}
+                  style={styles.actionBtnMargin}
+                />
+              </View>
             </View>
-          </View>
-
-          {currentRide.status === 'COMPLETED' && (
-            <TouchableOpacity style={[styles.button, { marginTop: 14 }]} onPress={() => setStep('BOOKING')}>
-              <Text style={styles.buttonText}>Book Another Ride</Text>
-            </TouchableOpacity>
           )}
-        </View>
-      )}
+        </ScrollView>
 
-      {step === 'NO_DRIVER' && currentRide && (
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>No Captains Available 😔</Text>
-          <View style={[styles.statusBadge, { backgroundColor: '#e74c3c' }]}>
-            <Text style={styles.statusText}>STATUS: CANCELLED_NO_DRIVER</Text>
-          </View>
-          <Text style={styles.info}>All captains in Kakinada are currently busy or offline.</Text>
-          <TouchableOpacity style={[styles.button, { marginTop: 20 }]} onPress={() => setStep('BOOKING')}>
-            <Text style={styles.buttonText}>Try Again</Text>
-          </TouchableOpacity>
-        </View>
-      )}
-    </ScrollView>
+        {/* Global Bottom Navigation Bar */}
+        <BottomTabBar activeTab="home" />
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    padding: 20,
-    backgroundColor: '#1a1a2e',
+  safeArea: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
+  keyboardContainer: {
+    flex: 1,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    padding: spacing.md,
+    paddingBottom: spacing.xl,
+  },
+  errorBanner: {
+    flexDirection: 'row',
     alignItems: 'center',
-    minHeight: '100%',
+    backgroundColor: colors.dangerLight,
+    padding: spacing.sm,
+    borderRadius: borderRadius.sm,
+    marginBottom: spacing.md,
+    gap: spacing.xs,
   },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#e94560',
-    marginBottom: 2,
-    marginTop: 20,
+  errorText: {
+    color: colors.danger,
+    fontSize: fontSizes.sm,
+    fontWeight: '600',
+    flex: 1,
   },
-  subtitle: {
-    fontSize: 14,
-    color: '#eaeaea',
-    marginBottom: 16,
+  authContainer: {
+    paddingTop: spacing.lg,
   },
-  card: {
-    width: '100%',
-    backgroundColor: '#16213e',
-    borderRadius: 12,
-    padding: 20,
+  authCard: {
+    backgroundColor: colors.surface,
+    borderRadius: borderRadius.lg,
+    padding: spacing.xl,
+    alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#0f3460',
+    borderColor: colors.border,
+    ...shadows.card,
+  },
+  authIconCircle: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: colors.primaryLight,
     alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.md,
   },
-  cardTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#ffffff',
-    marginBottom: 12,
-  },
-  label: {
-    fontSize: 12,
-    color: '#8a8a9a',
-    alignSelf: 'flex-start',
-    marginBottom: 6,
-  },
-  input: {
-    width: '100%',
-    backgroundColor: '#0f3460',
-    color: '#ffffff',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 16,
-    marginBottom: 16,
-  },
-  button: {
-    width: '100%',
-    backgroundColor: '#e94560',
-    paddingVertical: 12,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  buttonText: {
-    color: '#ffffff',
-    fontWeight: 'bold',
-    fontSize: 16,
-  },
-  info: {
-    fontSize: 14,
-    color: '#eaeaea',
-    marginBottom: 8,
+  authTitle: {
+    fontSize: fontSizes.xl,
+    fontWeight: '700',
+    color: colors.textPrimary,
+    marginBottom: spacing.xs,
     textAlign: 'center',
   },
-  error: {
-    color: '#ff6b6b',
-    marginBottom: 12,
+  authSub: {
+    fontSize: fontSizes.sm,
+    color: colors.textSecondary,
     textAlign: 'center',
+    marginBottom: spacing.lg,
+  },
+  devHintBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.primaryLight,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs + 2,
+    borderRadius: borderRadius.sm,
+    marginBottom: spacing.md,
+    gap: 6,
+  },
+  devHintText: {
+    fontSize: fontSizes.xs,
+    color: colors.primaryDark,
+    fontWeight: '600',
+  },
+  inputGroup: {
+    width: '100%',
+    marginBottom: spacing.md,
+  },
+  inputLabel: {
+    fontSize: fontSizes.xs,
+    fontWeight: '600',
+    color: colors.textSecondary,
+    marginBottom: spacing.xs,
+  },
+  phoneInputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  countryCodeBadge: {
+    backgroundColor: colors.background,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: borderRadius.sm,
+    paddingHorizontal: spacing.md,
+    height: dimensions.inputHeight,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: spacing.xs,
+  },
+  countryCodeText: {
+    fontSize: fontSizes.md,
+    fontWeight: '700',
+    color: colors.textPrimary,
+  },
+  phoneInput: {
+    flex: 1,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: borderRadius.sm,
+    paddingHorizontal: spacing.md,
+    height: dimensions.inputHeight,
+    fontSize: fontSizes.md,
+    color: colors.textPrimary,
+    fontWeight: '600',
+  },
+  otpInput: {
+    width: '100%',
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: borderRadius.sm,
+    paddingHorizontal: spacing.md,
+    height: dimensions.inputHeight,
+    fontSize: fontSizes.lg,
+    color: colors.textPrimary,
+    fontWeight: '700',
+    textAlign: 'center',
+    letterSpacing: 8,
+  },
+  authButton: {
+    width: '100%',
+    marginTop: spacing.xs,
+  },
+  termsText: {
+    fontSize: fontSizes.xs - 1,
+    color: colors.textMuted,
+    textAlign: 'center',
+    marginTop: spacing.md,
+    lineHeight: 16,
+  },
+  resendBtn: {
+    marginTop: spacing.md,
+    minHeight: dimensions.minTouchTarget,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  resendText: {
+    fontSize: fontSizes.sm,
+    color: colors.primary,
+    fontWeight: '600',
   },
   bookingContainer: {
     width: '100%',
   },
-  headerRow: {
+  greetingSection: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
+    alignItems: 'flex-start',
+    marginBottom: spacing.md,
   },
-  welcomeText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#ffffff',
-  },
-  smallLogoutBtn: {
-    backgroundColor: '#e94560',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 6,
-  },
-  smallLogoutText: {
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: 'bold',
-  },
-  mapCard: {
-    backgroundColor: '#0f3460',
-    padding: 14,
-    borderRadius: 10,
-    marginBottom: 16,
-  },
-  mapTitle: {
-    color: '#53a8b6',
-    fontWeight: 'bold',
-    fontSize: 15,
-    marginBottom: 4,
-  },
-  mapSub: {
-    color: '#eaeaea',
-    fontSize: 13,
-    marginBottom: 2,
-  },
-  sectionLabel: {
-    color: '#8a8a9a',
-    fontSize: 13,
+  greetingSub: {
+    fontSize: fontSizes.sm,
+    color: colors.textSecondary,
     fontWeight: '600',
-    marginBottom: 8,
-    marginTop: 8,
   },
-  chipRow: {
-    marginBottom: 12,
+  greetingTitle: {
+    fontSize: fontSizes.xl,
+    fontWeight: '700',
+    color: colors.textPrimary,
+    letterSpacing: -0.3,
   },
-  chip: {
-    backgroundColor: '#0f3460',
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 20,
-    marginRight: 8,
+  logoutPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: colors.dangerLight,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: borderRadius.full,
   },
-  chipActive: {
-    backgroundColor: '#e94560',
+  logoutPillText: {
+    fontSize: fontSizes.xs,
+    color: colors.danger,
+    fontWeight: '700',
   },
-  chipText: {
-    color: '#eaeaea',
-    fontSize: 13,
+  cardSpacing: {
+    marginBottom: spacing.md,
   },
-  chipTextActive: {
-    color: '#fff',
-    fontWeight: 'bold',
+  horizontalScroll: {
+    marginBottom: spacing.md,
   },
-  vehicleRow: {
+  chipsContainer: {
+    paddingRight: spacing.md,
+  },
+  vehicleGrid: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 20,
+    marginBottom: spacing.md,
+    gap: spacing.xs,
   },
-  vehicleCard: {
+  vehicleOptionCard: {
     flex: 1,
-    backgroundColor: '#0f3460',
-    padding: 12,
-    borderRadius: 10,
-    marginHorizontal: 4,
+    backgroundColor: colors.surface,
+    borderWidth: 1.5,
+    borderColor: colors.border,
+    borderRadius: borderRadius.md,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.xs,
     alignItems: 'center',
-    borderWidth: 2,
-    borderColor: 'transparent',
+    ...shadows.card,
   },
-  vehicleCardActive: {
-    borderColor: '#e94560',
-    backgroundColor: '#1f4068',
+  vehicleOptionCardActive: {
+    borderColor: colors.primary,
+    backgroundColor: colors.primaryLight,
   },
-  vehicleIcon: {
-    fontSize: 24,
-    marginBottom: 4,
+  vehicleIconCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.background,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.xs,
   },
   vehicleName: {
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 14,
+    fontSize: fontSizes.sm,
+    fontWeight: '700',
+    color: colors.textPrimary,
+  },
+  vehicleTextActive: {
+    color: colors.primaryDark,
   },
   vehicleFare: {
-    color: '#53a8b6',
-    fontSize: 13,
+    fontSize: fontSizes.sm,
+    fontWeight: '700',
+    color: colors.textSecondary,
     marginTop: 2,
   },
-  confirmBtn: {
-    backgroundColor: '#e94560',
-    paddingVertical: 14,
-    borderRadius: 10,
+  vehicleFareActive: {
+    color: colors.primary,
+  },
+  vehicleEta: {
+    fontSize: fontSizes.xs - 1,
+    color: colors.textMuted,
+    marginTop: 2,
+  },
+  paymentRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginBottom: spacing.md,
+  },
+  paymentOptionCard: {
+    flex: 1,
+    flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 10,
+    justifyContent: 'space-between',
+    backgroundColor: colors.surface,
+    borderWidth: 1.5,
+    borderColor: colors.border,
+    borderRadius: borderRadius.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    minHeight: dimensions.buttonHeight,
   },
-  confirmBtnText: {
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 16,
+  paymentOptionCardActive: {
+    borderColor: colors.primary,
+    backgroundColor: colors.primaryLight,
   },
-  statusBadge: {
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: 20,
-    marginBottom: 16,
+  paymentName: {
+    fontSize: fontSizes.sm,
+    fontWeight: '600',
+    color: colors.textPrimary,
+    flex: 1,
+    marginLeft: spacing.xs,
   },
-  statusText: {
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 13,
+  paymentNameActive: {
+    color: colors.primaryDark,
+    fontWeight: '700',
   },
-  rideDetailBox: {
+  searchingContainer: {
     width: '100%',
-    backgroundColor: '#0f3460',
-    padding: 14,
-    borderRadius: 8,
-    marginBottom: 16,
   },
-  rideDetailText: {
-    color: '#eaeaea',
-    fontSize: 14,
+  stateCard: {
+    backgroundColor: colors.surface,
+    borderRadius: borderRadius.lg,
+    padding: spacing.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    marginBottom: spacing.md,
+    alignItems: 'center',
+    ...shadows.card,
+  },
+  stateIconCircle: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: colors.primaryLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.sm,
+  },
+  stateTitle: {
+    fontSize: fontSizes.lg,
+    fontWeight: '700',
+    color: colors.textPrimary,
+    textAlign: 'center',
+  },
+  stateSub: {
+    fontSize: fontSizes.xs,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    marginTop: 2,
+    marginBottom: spacing.sm,
+  },
+  statusChipWrapper: {
+    marginVertical: spacing.xs,
+  },
+  detailSummaryBox: {
+    width: '100%',
+    backgroundColor: colors.background,
+    borderRadius: borderRadius.sm,
+    padding: spacing.md,
+    marginVertical: spacing.md,
+  },
+  summaryItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     marginBottom: 4,
   },
-  driverCard: {
+  summaryLabel: {
+    fontSize: fontSizes.xs,
+    color: colors.textSecondary,
+  },
+  summaryValue: {
+    fontSize: fontSizes.xs,
+    fontWeight: '700',
+    color: colors.textPrimary,
+  },
+  cancelBtn: {
     width: '100%',
-    backgroundColor: '#1a365d',
-    padding: 14,
-    borderRadius: 8,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: '#2b6cb0',
+  },
+  assignedContainer: {
+    width: '100%',
+  },
+  assignedHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    width: '100%',
+    marginBottom: spacing.sm,
+  },
+  tripStatusTitle: {
+    fontSize: fontSizes.md + 1,
+    fontWeight: '700',
+    color: colors.textPrimary,
+  },
+  tripStatusSub: {
+    fontSize: fontSizes.xs,
+    color: colors.textSecondary,
+  },
+  driverProfileBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    width: '100%',
+    backgroundColor: colors.background,
+    borderRadius: borderRadius.md,
+    padding: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  driverAvatar: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.primaryLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: spacing.sm,
+  },
+  driverMeta: {
+    flex: 1,
   },
   driverName: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginBottom: 4,
-  },
-  driverPhone: {
-    color: '#90cdf4',
-    fontSize: 14,
-    marginBottom: 2,
+    fontSize: fontSizes.md,
+    fontWeight: '700',
+    color: colors.textPrimary,
   },
   driverVehicle: {
-    color: '#e2e8f0',
-    fontSize: 14,
-    marginBottom: 2,
+    fontSize: fontSizes.xs,
+    color: colors.textSecondary,
+    marginTop: 1,
   },
-  driverReg: {
-    color: '#63b3ed',
-    fontSize: 13,
-    fontWeight: 'bold',
+  driverActions: {
+    flexDirection: 'row',
+    gap: spacing.xs,
+  },
+  driverActionBtn: {
+    width: dimensions.minTouchTarget,
+    height: dimensions.minTouchTarget,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  locationSummaryRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  pickupDotSmall: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.pickupMarker,
+  },
+  dropSquareSmall: {
+    width: 8,
+    height: 8,
+    borderRadius: 1,
+    backgroundColor: colors.dropMarker,
+  },
+  locationSummaryText: {
+    fontSize: fontSizes.xs,
+    color: colors.textPrimary,
+    fontWeight: '600',
+    flex: 1,
+  },
+  locationDivider: {
+    height: 1,
+    backgroundColor: colors.border,
+    marginVertical: spacing.xs,
+  },
+  paymentActionsBox: {
+    width: '100%',
+    backgroundColor: colors.primaryLight,
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+  },
+  paymentActionTitle: {
+    fontSize: fontSizes.sm,
+    fontWeight: '700',
+    color: colors.primaryDark,
+    textAlign: 'center',
+    marginBottom: spacing.sm,
+  },
+  cashInstructions: {
+    alignItems: 'center',
+  },
+  cashText: {
+    fontSize: fontSizes.xs,
+    color: colors.textPrimary,
+    textAlign: 'center',
+    marginBottom: spacing.sm,
+  },
+  switchMethodBtn: {
+    width: '100%',
+  },
+  upiActions: {
+    gap: spacing.xs,
+  },
+  upiPayBtn: {
+    width: '100%',
+  },
+  actionBtnMargin: {
+    width: '100%',
+    marginTop: spacing.xs,
+  },
+  devSimulationPanel: {
+    width: '100%',
+    marginTop: spacing.md,
+    paddingTop: spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    alignItems: 'center',
+  },
+  devSimTitle: {
+    fontSize: fontSizes.xs,
+    color: colors.textMuted,
+    fontWeight: '600',
+    marginBottom: spacing.xs,
+  },
+  simButtonsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: 6,
+  },
+  simPill: {
+    backgroundColor: colors.border,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: borderRadius.full,
+    minHeight: 32,
+    justifyContent: 'center',
+  },
+  simPillText: {
+    fontSize: fontSizes.xs,
+    color: colors.textPrimary,
+    fontWeight: '600',
+  },
+  noDriverContainer: {
+    width: '100%',
+  },
+  freshnessNotice: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: colors.warningLight,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderRadius: borderRadius.sm,
+    marginBottom: spacing.sm,
+  },
+  freshnessNoticeText: {
+    fontSize: fontSizes.xs,
+    color: '#B45309',
+    fontWeight: '600',
   },
 });
