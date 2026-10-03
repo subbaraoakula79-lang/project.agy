@@ -8,7 +8,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, fontSizes, dimensions, shadows } from '../app/theme';
+import { colors, fontSizes, dimensions, shadows } from '../theme';
 
 export type TabKey = 'home' | 'rides' | 'safety' | 'profile';
 

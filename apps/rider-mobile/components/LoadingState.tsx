@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, ActivityIndicator, StyleProp, ViewStyle } from 'react-native';
-import { colors, spacing, fontSizes } from '../app/theme';
+import { colors, spacing, fontSizes } from '../theme';
 
 export interface LoadingStateProps {
   message?: string;

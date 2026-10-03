@@ -1,7 +1,7 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, StyleProp, ViewStyle } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, StyleProp, ViewStyle, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, spacing, fontSizes, borderRadius, shadows, dimensions } from '../app/theme';
+import { colors, spacing, fontSizes, borderRadius, shadows, dimensions } from '../theme';
 import { StatusChip } from './StatusChip';
 
 export interface RideCardProps {
@@ -48,18 +48,19 @@ export const RideCard: React.FC<RideCardProps> = ({
       {/* Header: Vehicle & Fare & Status */}
       <View style={styles.headerRow}>
         <View style={styles.vehicleInfo}>
-          <Ionicons
-            name={
-              vehicleType.toLowerCase().includes('bike')
-                ? 'bicycle-outline'
-                : vehicleType.toLowerCase().includes('cab') || vehicleType.toLowerCase().includes('car')
-                ? 'car-outline'
-                : 'navigate-outline'
-            }
-            size={18}
-            color={colors.primary}
-            style={styles.vehicleIcon}
-          />
+          <View style={styles.vehicleThumbBox}>
+            <Image
+              source={
+                vehicleType.toLowerCase().includes('bike')
+                  ? require('../assets/images/vehicles/bike.png')
+                  : vehicleType.toLowerCase().includes('cab') || vehicleType.toLowerCase().includes('car')
+                  ? require('../assets/images/vehicles/cab.png')
+                  : require('../assets/images/vehicles/auto.png')
+              }
+              style={styles.vehicleThumbImage}
+              resizeMode="contain"
+            />
+          </View>
           <Text style={styles.vehicleText}>{vehicleType}</Text>
           <Text style={styles.dotSeparator}>•</Text>
           <Text style={styles.fareText}>₹{fare}</Text>
@@ -157,8 +158,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flex: 1,
   },
-  vehicleIcon: {
+  vehicleThumbBox: {
+    width: 28,
+    height: 20,
+    borderRadius: 4,
+    backgroundColor: '#F8FAFC',
+    alignItems: 'center',
+    justifyContent: 'center',
     marginRight: 6,
+  },
+  vehicleThumbImage: {
+    width: '100%',
+    height: '100%',
   },
   vehicleText: {
     fontSize: fontSizes.md,

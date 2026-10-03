@@ -8,7 +8,7 @@ import {
   ViewStyle,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, spacing, fontSizes, borderRadius, shadows } from '../app/theme';
+import { colors, spacing, fontSizes, borderRadius, shadows } from '../theme';
 
 export interface SafetyActionCardProps {
   iconName: React.ComponentProps<typeof Ionicons>['name'];

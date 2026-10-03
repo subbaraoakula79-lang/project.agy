@@ -1,191 +1,248 @@
+// apps/rider-mobile/app/index.tsx
 import { useState, useEffect } from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  TextInput,
   TouchableOpacity,
   ScrollView,
   SafeAreaView,
   KeyboardAvoidingView,
   Platform,
+  Alert,
+  Image,
+  ImageBackground,
 } from 'react-native';
-import * as Location from 'expo-location';
+import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, spacing, fontSizes, borderRadius, shadows, dimensions } from './theme';
+import { colors, spacing, fontSizes, borderRadius, shadows, dimensions } from '../theme';
+import { useAuth } from '../context/AuthContext';
+import { BrandLogo } from '../components/BrandLogo';
 import { AppHeader } from '../components/AppHeader';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { SecondaryButton } from '../components/SecondaryButton';
-import { BookingCard } from '../components/BookingCard';
 import { MapPreviewCard } from '../components/MapPreviewCard';
-import { QuickActionChip } from '../components/QuickActionChip';
-import { StatusChip } from '../components/StatusChip';
-import { SectionHeader } from '../components/SectionHeader';
 import { BottomTabBar } from '../components/BottomTabBar';
 
-interface LocationItem {
-  name: string;
-  lat: number;
-  lng: number;
-}
+type AuthStep = 'SPLASH' | 'ONBOARDING';
+type RideStep =
+  | 'BOOKING'
+  | 'CONFIRM_RIDE'
+  | 'SEARCHING'
+  | 'DRIVER_ARRIVING'
+  | 'RIDE_IN_PROGRESS'
+  | 'RIDE_COMPLETED'
+  | 'NO_DRIVER';
 
-const KAKINADA_LOCATIONS: LocationItem[] = [
-  { name: 'Kakinada Railway Station', lat: 16.9558, lng: 82.2386 },
-  { name: 'Jagannaickpur Main Road', lat: 16.9891, lng: 82.2475 },
-  { name: 'Kakinada Beach Road', lat: 16.9330, lng: 82.2613 },
-  { name: 'Sarpavaram Junction', lat: 16.9764, lng: 82.2402 },
-  { name: 'Bhanugudi Junction', lat: 16.9910, lng: 82.2370 },
-  { name: 'JNTU Kakinada Campus', lat: 16.9784, lng: 82.2350 },
-  { name: 'Kakinada Bus Stand', lat: 16.9665, lng: 82.2425 },
-];
+export default function RiderIndexScreen() {
+  const router = useRouter();
+  const { isAuthenticated } = useAuth();
 
-export default function RiderAppScreen() {
-  // Auth state
-  const [step, setStep] = useState<'PHONE' | 'OTP' | 'BOOKING' | 'SEARCHING' | 'ASSIGNED' | 'NO_DRIVER'>('PHONE');
-  const [phoneNumber, setPhoneNumber] = useState('+919000000001');
-  const [otp, setOtp] = useState('123456');
-  const [user, setUser] = useState<{ id: string; name: string; role: string } | null>(null);
+  // Public/Auth sub-step when not authenticated
+  const [authStep, setAuthStep] = useState<AuthStep>('SPLASH');
 
-  // Device GPS State
-  const [gpsPermission, setGpsPermission] = useState<'UNDETERMINED' | 'GRANTED' | 'DENIED'>('UNDETERMINED');
-  const [currentGps, setCurrentGps] = useState<{ lat: number; lng: number; accuracy: number | null } | null>(null);
-  const [locationFreshness, setLocationFreshness] = useState<'FRESH' | 'STALE' | 'UNAVAILABLE'>('FRESH');
+  // Authenticated Ride sub-step
+  const [rideStep, setRideStep] = useState<RideStep>('BOOKING');
 
+  // Selected Vehicle
+  const [selectedVehicle, setSelectedVehicle] = useState<'BIKE' | 'AUTO' | 'CAB'>('BIKE');
+
+  // Ratings for completed ride
+  const [userRating, setUserRating] = useState<number>(5);
+  const [ratingSubmitted, setRatingSubmitted] = useState<boolean>(false);
+
+  // Auto transition from Splash to Onboarding after 2.5s if untouched
   useEffect(() => {
-    (async () => {
-      try {
-        const { status } = await Location.requestForegroundPermissionsAsync();
-        if (status === 'granted') {
-          setGpsPermission('GRANTED');
-          const pos = await Location.getCurrentPositionAsync({});
-          setCurrentGps({ lat: pos.coords.latitude, lng: pos.coords.longitude, accuracy: pos.coords.accuracy });
-          setLocationFreshness('FRESH');
-        } else {
-          setGpsPermission('DENIED');
-        }
-      } catch (err) {
-        setGpsPermission('DENIED');
-      }
-    })();
-  }, []);
+    if (!isAuthenticated && authStep === 'SPLASH') {
+      const timer = setTimeout(() => {
+        setAuthStep('ONBOARDING');
+      }, 2500);
+      return () => clearTimeout(timer);
+    }
+  }, [authStep, isAuthenticated]);
 
-  // Booking state
-  const [pickup, setPickup] = useState<LocationItem>(KAKINADA_LOCATIONS[0]!);
-  const [destination, setDestination] = useState<LocationItem>(KAKINADA_LOCATIONS[1]!);
-  const [selectedVehicle, setSelectedVehicle] = useState<'BIKE' | 'AUTO' | 'CAB'>('AUTO');
-  const [paymentMethod, setPaymentMethod] = useState<'CASH' | 'UPI'>('CASH');
+  // Fare calculations and asset mapping based on selected vehicle
+  const vehicleConfig = {
+    BIKE: {
+      name: 'Bike',
+      fare: 45,
+      fareRange: '₹ 45 - 50',
+      eta: '5 min',
+      icon: 'bicycle' as const,
+      driverVehicle: 'Hero Splendor • AP 39 XX 1234',
+      image: require('../assets/images/vehicles/bike.png'),
+    },
+    AUTO: {
+      name: 'Auto',
+      fare: 72,
+      fareRange: '₹ 72 - 80',
+      eta: '7 min',
+      icon: 'navigate' as const,
+      driverVehicle: 'Bajaj Compact RE • AP 39 Y 5678',
+      image: require('../assets/images/vehicles/auto.png'),
+    },
+    CAB: {
+      name: 'Cab',
+      fare: 110,
+      fareRange: '₹ 110 - 125',
+      eta: '10 min',
+      icon: 'car' as const,
+      driverVehicle: 'Maruti Suzuki Dzire • AP 39 Z 9012',
+      image: require('../assets/images/vehicles/cab.png'),
+    },
+  };
 
-  // Ride State
-  const [currentRide, setCurrentRide] = useState<{
-    id: string;
-    status: string;
-    vehicleType: string;
-    pickupAddress: string;
-    dropAddress: string;
-    estimatedFare: number;
-    paymentMethod: string;
-    driver?: {
-      name: string;
-      phone: string;
-      vehicleModel: string;
-      regNumber: string;
-    } | null;
-  } | null>(null);
+  const currentVehicle = vehicleConfig[selectedVehicle];
 
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  // Actions for Booking Flow
+  const handleProceedToConfirm = () => {
+    setRideStep('CONFIRM_RIDE');
+  };
 
-  const handleRequestOtp = () => {
-    setError('');
-    setLoading(true);
+  const handleConfirmBooking = () => {
+    setRideStep('SEARCHING');
+
+    // Automatically transition to DRIVER_ARRIVING after 2.5 seconds
     setTimeout(() => {
-      setLoading(false);
-      setStep('OTP');
-    }, 400);
+      setRideStep('DRIVER_ARRIVING');
+    }, 2500);
   };
 
-  const handleVerifyOtp = () => {
-    setError('');
-    setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
-      if (otp === '123456') {
-        setUser({ id: 'rider-001', name: 'Priya Sharma', role: 'RIDER' });
-        setStep('BOOKING');
-      } else {
-        setError('Invalid OTP code. Use test code 123456');
-      }
-    }, 400);
+  const handleCancelRide = () => {
+    setRideStep('BOOKING');
   };
 
-  const handleBookRide = (simulateNoDriver = false) => {
-    setError('');
-    setLoading(true);
-    const fareMap = { BIKE: 76, AUTO: 108, CAB: 164 };
-    const rideId = `ride-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
-
-    const newRide = {
-      id: rideId,
-      status: 'SEARCHING_DRIVER',
-      vehicleType: selectedVehicle,
-      pickupAddress: pickup.name,
-      dropAddress: destination.name,
-      estimatedFare: fareMap[selectedVehicle],
-      paymentMethod,
-      driver: null,
-    };
-
-    setCurrentRide(newRide);
-    setStep('SEARCHING');
-    setLoading(false);
-
-    // Simulate driver matching transition
-    setTimeout(() => {
-      if (simulateNoDriver) {
-        setCurrentRide((prev) => (prev ? { ...prev, status: 'CANCELLED_NO_DRIVER' } : null));
-        setStep('NO_DRIVER');
-      } else {
-        setCurrentRide((prev) =>
-          prev
-            ? {
-                ...prev,
-                status: 'DRIVER_ASSIGNED',
-                driver: {
-                  name: 'Suresh Babu',
-                  phone: '+918000000001',
-                  vehicleModel:
-                    selectedVehicle === 'BIKE'
-                      ? 'Honda Activa 6G'
-                      : selectedVehicle === 'AUTO'
-                      ? 'Bajaj RE Compact'
-                      : 'Maruti Swift Dzire',
-                  regNumber:
-                    selectedVehicle === 'BIKE'
-                      ? 'AP05AB1234'
-                      : selectedVehicle === 'AUTO'
-                      ? 'AP05CD5678'
-                      : 'AP05EF9012',
-                },
-              }
-            : null,
-        );
-        setStep('ASSIGNED');
-      }
-    }, 1800);
+  const handleDriverArrived = () => {
+    setRideStep('RIDE_IN_PROGRESS');
   };
 
-  const handleLogout = () => {
-    setUser(null);
-    setCurrentRide(null);
-    setStep('PHONE');
-    setOtp('123456');
+  const handleCompleteRide = () => {
+    setRideStep('RIDE_COMPLETED');
+    setRatingSubmitted(false);
   };
 
-  const handleSwapLocations = () => {
-    const temp = pickup;
-    setPickup(destination);
-    setDestination(temp);
+  const handleResetToBooking = () => {
+    setRideStep('BOOKING');
   };
+
+  const handleSos = () => {
+    Alert.alert(
+      '🚨 Emergency SOS Activated',
+      'Location broadcasted to Andhra Pradesh Police (112) & 24/7 Safety Dispatch.'
+    );
+  };
+
+  // ==========================================
+  // UN-AUTHENTICATED FLOW (NO BottomTabBar!)
+  // ==========================================
+  if (!isAuthenticated) {
+    if (authStep === 'SPLASH') {
+      return (
+        <View style={styles.splashContainer}>
+          <ImageBackground
+            source={require('../assets/images/city/kakinada.jpg')}
+            style={styles.splashBgImage}
+            resizeMode="cover"
+          >
+            <SafeAreaView style={styles.splashSafeOverlay}>
+              {/* Top/Center Brand Box matching Reference Screen 1 */}
+              <View style={styles.splashTop}>
+                <View style={styles.splashCard}>
+                  <BrandLogo size="medium" showTagline={true} />
+                </View>
+              </View>
+
+              {/* Bottom City Tagline matching Reference Screen 1 */}
+              <TouchableOpacity
+                style={styles.splashBottom}
+                onPress={() => setAuthStep('ONBOARDING')}
+                activeOpacity={0.85}
+                accessibilityRole="button"
+                accessibilityLabel="Tap to enter YatraSeva"
+              >
+                <View style={styles.splashBottomScrim}>
+                  <Text style={styles.splashSub}>Your trusted ride partner in</Text>
+                  <Text style={styles.splashCity}>Kakinada</Text>
+                  <View style={styles.waveAccent}>
+                    <Ionicons name="water" size={18} color="#38BDF8" />
+                  </View>
+                  <Text style={styles.splashTapPrompt}>Tap anywhere to continue →</Text>
+                </View>
+              </TouchableOpacity>
+            </SafeAreaView>
+          </ImageBackground>
+        </View>
+      );
+    }
+
+    // ONBOARDING SCREEN (Screen 2 in Reference)
+    return (
+      <SafeAreaView style={styles.onboardingContainer}>
+        {/* Top Skip Button */}
+        <View style={styles.onboardingTopRow}>
+          <TouchableOpacity
+            onPress={() => router.push('/login')}
+            style={styles.skipButton}
+            accessibilityRole="button"
+            accessibilityLabel="Skip to login"
+          >
+            <Text style={styles.skipText}>Skip</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Center Illustration Area matching Reference Screen 2 */}
+        <View style={styles.illustrationArea}>
+          <Image
+            source={require('../assets/images/illustrations/ride-city.png')}
+            style={styles.onboardingIllustrationImage}
+            resizeMode="contain"
+          />
+        </View>
+
+        {/* Text Section */}
+        <View style={styles.onboardingTextSection}>
+          <Text style={styles.onboardingHeading}>
+            Ride Safe{'\n'}Reach On Time
+          </Text>
+          <Text style={styles.onboardingBody}>
+            Book bikes, autos or cabs in seconds.{'\n'}Travel safely with verified drivers.
+          </Text>
+
+          {/* 3-Dot Pagination Indicator */}
+          <View style={styles.paginationRow}>
+            <View style={styles.activePill} />
+            <View style={styles.inactiveDot} />
+            <View style={styles.inactiveDot} />
+          </View>
+        </View>
+
+        {/* Action Button & Link */}
+        <View style={styles.onboardingBottomActions}>
+          <PrimaryButton
+            title="Get Started"
+            onPress={() => router.push('/login')}
+            style={styles.getStartedButton}
+            accessibilityLabel="Get Started with mobile verification"
+          />
+
+          <TouchableOpacity
+            onPress={() => router.push('/login')}
+            style={styles.loginLinkButton}
+            accessibilityRole="button"
+            accessibilityLabel="Already have an account? Log In"
+          >
+            <Text style={styles.alreadyHaveText}>
+              Already have an account? <Text style={styles.loginLinkBold}>Log In</Text>
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  // ==========================================
+  // AUTHENTICATED RIDER FLOW
+  // ==========================================
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -193,555 +250,659 @@ export default function RiderAppScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={styles.keyboardContainer}
       >
-        <AppHeader
-          title="YatraSeva"
-          subtitle="Safe Rides • Better Tomorrow"
-          showBack={step === 'OTP'}
-          onBack={() => setStep('PHONE')}
-          showNotification={Boolean(user)}
-          showProfile={Boolean(user)}
-        />
+        {/* Screen 1: BOOKING (Home) */}
+        {rideStep === 'BOOKING' && (
+          <View style={styles.flexOne}>
+            <AppHeader
+              showLogo={true}
+              showNotification={true}
+              onNotificationPress={() =>
+                Alert.alert('Notifications', 'You have no unread notifications.')
+              }
+            />
 
-        <ScrollView
-          style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-        >
-          {error ? (
-            <View style={styles.errorBanner} accessibilityRole="alert">
-              <Ionicons name="alert-circle" size={18} color={colors.danger} />
-              <Text style={styles.errorText}>{error}</Text>
-            </View>
-          ) : null}
-
-          {/* STEP 1: PHONE LOGIN */}
-          {step === 'PHONE' && (
-            <View style={styles.authContainer}>
-              <View style={styles.authCard}>
-                <View style={styles.authIconCircle}>
-                  <Ionicons name="call-outline" size={28} color={colors.primary} />
+            <ScrollView
+              contentContainerStyle={styles.bookingScrollContent}
+              showsVerticalScrollIndicator={false}
+            >
+              {/* Pickup / Drop Booking Card matching Reference Screen 4 */}
+              <View style={styles.locationCard}>
+                {/* Pickup Row */}
+                <View style={styles.locationRow}>
+                  <View style={styles.greenDotIndicator} />
+                  <View style={styles.locationTextColumn}>
+                    <Text style={styles.locationLabel}>Pickup Location</Text>
+                    <Text style={styles.locationValue}>Kakinada Railway Station</Text>
+                  </View>
+                  <TouchableOpacity
+                    style={styles.locationActionIcon}
+                    accessibilityLabel="Use current GPS location"
+                  >
+                    <Ionicons name="locate" size={20} color={colors.primary} />
+                  </TouchableOpacity>
                 </View>
-                <Text style={styles.authTitle}>Verify Your Mobile Number</Text>
-                <Text style={styles.authSub}>We'll send you a 6 digit OTP to verify your account</Text>
 
-                <View style={styles.inputGroup}>
-                  <Text style={styles.inputLabel}>Mobile Number</Text>
-                  <View style={styles.phoneInputRow}>
-                    <View style={styles.countryCodeBadge}>
-                      <Text style={styles.countryCodeText}>+91</Text>
-                    </View>
-                    <TextInput
-                      style={styles.phoneInput}
-                      value={phoneNumber.replace('+91', '')}
-                      onChangeText={(val) => setPhoneNumber(`+91${val.replace(/\D/g, '')}`)}
-                      placeholder="9000000001"
-                      placeholderTextColor={colors.textMuted}
-                      keyboardType="phone-pad"
-                      maxLength={10}
-                      accessibilityLabel="Enter 10-digit mobile number"
+                {/* Divider Line */}
+                <View style={styles.locationDivider} />
+
+                {/* Drop Row */}
+                <View style={styles.locationRow}>
+                  <View style={styles.redDotIndicator} />
+                  <View style={styles.locationTextColumn}>
+                    <Text style={styles.locationLabel}>Drop Location</Text>
+                    <Text style={styles.locationValue}>Rama Rao Peta, Kakinada</Text>
+                  </View>
+                  <TouchableOpacity
+                    style={styles.locationActionIcon}
+                    accessibilityLabel="Swap pickup and drop"
+                  >
+                    <Ionicons name="swap-vertical" size={20} color={colors.textSecondary} />
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              {/* Map Preview Card */}
+              <MapPreviewCard
+                pickupName="Kakinada Railway Station"
+                dropName="Rama Rao Peta"
+                distanceText="1.2 km"
+                durationText="5 min"
+                height={210}
+                style={styles.mapMargin}
+              />
+
+              {/* Choose Vehicle Section matching Reference Screen 4 */}
+              <View style={styles.vehicleSection}>
+                <Text style={styles.sectionHeading}>Choose Vehicle</Text>
+                <View style={styles.vehicleCardsRow}>
+                  {(['BIKE', 'AUTO', 'CAB'] as const).map((type) => {
+                    const cfg = vehicleConfig[type];
+                    const isSelected = selectedVehicle === type;
+                    return (
+                      <TouchableOpacity
+                        key={type}
+                        style={[
+                          styles.vehicleCard,
+                          isSelected && styles.vehicleCardActive,
+                        ]}
+                        onPress={() => setSelectedVehicle(type)}
+                        activeOpacity={0.75}
+                        accessibilityRole="button"
+                        accessibilityLabel={`${cfg.name}, ₹${cfg.fare}, ${cfg.eta}`}
+                        accessibilityState={{ selected: isSelected }}
+                      >
+                        <View
+                          style={[
+                            styles.vehicleImageContainer,
+                            isSelected && styles.vehicleImageContainerActive,
+                          ]}
+                        >
+                          <Image
+                            source={cfg.image}
+                            style={[
+                              styles.vehicleCardImage,
+                              type === 'AUTO' && { transform: [{ scale: 1.15 }] },
+                            ]}
+                            resizeMode="contain"
+                          />
+                        </View>
+                        <Text
+                          style={[
+                            styles.vehicleTitle,
+                            isSelected && styles.vehicleTitleActive,
+                          ]}
+                        >
+                          {cfg.name}
+                        </Text>
+                        <Text
+                          style={[
+                            styles.vehicleFareText,
+                            isSelected && styles.vehicleFareTextActive,
+                          ]}
+                        >
+                          ₹ {cfg.fare}
+                        </Text>
+                        <Text style={styles.vehicleEtaText}>{cfg.eta}</Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </View>
+
+              {/* Estimated Fare & View Details Bar */}
+              <View style={styles.fareSummaryBar}>
+                <View style={styles.fareLeft}>
+                  <Ionicons name="pricetag-outline" size={16} color={colors.primary} />
+                  <Text style={styles.estimatedFareLabel}>Estimated Fare</Text>
+                  <Text style={styles.estimatedFareValue}>{currentVehicle.fareRange}</Text>
+                </View>
+                <TouchableOpacity
+                  onPress={() =>
+                    Alert.alert(
+                      'Fare Details',
+                      `Base fare: ₹30\nDistance (1.2 km): ₹15\nTaxes: included\nTotal: ${currentVehicle.fareRange}`
+                    )
+                  }
+                >
+                  <Text style={styles.viewDetailsLink}>View Details &gt;</Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* Primary Book Ride Button */}
+              <PrimaryButton
+                title="Book Ride"
+                onPress={handleProceedToConfirm}
+                style={styles.bookRideButton}
+                accessibilityLabel={`Book ${currentVehicle.name} ride`}
+              />
+            </ScrollView>
+
+            <BottomTabBar activeTab="home" />
+          </View>
+        )}
+
+        {/* Screen 2: CONFIRM RIDE (Screen 6 in Reference) */}
+        {rideStep === 'CONFIRM_RIDE' && (
+          <View style={styles.flexOne}>
+            <AppHeader
+              title="Confirm Ride"
+              showBack={true}
+              onBack={() => setRideStep('BOOKING')}
+            />
+
+            <View style={styles.confirmMapContainer}>
+              <MapPreviewCard
+                pickupName="Kakinada Railway Station"
+                dropName="Rama Rao Peta"
+                height={260}
+              />
+            </View>
+
+            {/* Bottom White Sheet */}
+            <View style={styles.bottomSheetCard}>
+              {/* Selected Vehicle Row */}
+              <View style={styles.sheetVehicleRow}>
+                <View style={styles.sheetVehicleImageContainer}>
+                  <Image
+                    source={currentVehicle.image}
+                    style={styles.sheetVehicleImage}
+                    resizeMode="contain"
+                  />
+                </View>
+                <View style={styles.sheetVehicleMeta}>
+                  <Text style={styles.sheetVehicleName}>{currentVehicle.name}</Text>
+                  <Text style={styles.sheetVehicleEta}>{currentVehicle.eta}</Text>
+                </View>
+                <Text style={styles.sheetVehiclePrice}>{currentVehicle.fareRange}</Text>
+              </View>
+
+              <View style={styles.sheetDivider} />
+
+              {/* Payment Method Row */}
+              <TouchableOpacity
+                style={styles.sheetOptionRow}
+                onPress={() => Alert.alert('Payment Method', 'Cash Payment selected')}
+                accessibilityRole="button"
+              >
+                <View style={styles.sheetOptionLeft}>
+                  <Ionicons name="cash-outline" size={20} color={colors.success} />
+                  <Text style={styles.sheetOptionText}>Cash Payment</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+              </TouchableOpacity>
+
+              <View style={styles.sheetDivider} />
+
+              {/* Promo Code Row */}
+              <TouchableOpacity
+                style={styles.sheetOptionRow}
+                onPress={() => Alert.alert('Promo Code', 'Promo code FIRST50 applied')}
+                accessibilityRole="button"
+              >
+                <View style={styles.sheetOptionLeft}>
+                  <Ionicons name="ticket-outline" size={20} color={colors.primary} />
+                  <Text style={styles.sheetOptionText}>Apply Promo Code</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+              </TouchableOpacity>
+
+              {/* Big Green Confirm Booking Button */}
+              <TouchableOpacity
+                style={styles.confirmBookingButton}
+                onPress={handleConfirmBooking}
+                activeOpacity={0.8}
+                accessibilityRole="button"
+                accessibilityLabel="Confirm Booking"
+              >
+                <Text style={styles.confirmBookingText}>Confirm Booking</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+
+        {/* Screen 3: FINDING DRIVER (Screen 7 in Reference) */}
+        {rideStep === 'SEARCHING' && (
+          <View style={styles.flexOne}>
+            <AppHeader
+              title="Finding Driver"
+              showBack={true}
+              onBack={handleCancelRide}
+            />
+
+            <View style={styles.confirmMapContainer}>
+              <MapPreviewCard
+                pickupName="Kakinada Railway Station"
+                dropName="Rama Rao Peta"
+                height={260}
+              />
+            </View>
+
+            {/* Bottom White Sheet */}
+            <View style={styles.bottomSheetCard}>
+              <View style={styles.findingImageCircle}>
+                <Image
+                  source={currentVehicle.image}
+                  style={styles.findingVehicleImage}
+                  resizeMode="contain"
+                />
+              </View>
+
+              <Text style={styles.findingTitle}>Finding a driver...</Text>
+              <Text style={styles.findingSub}>
+                We are looking for the nearest available driver
+              </Text>
+
+              {/* Status List */}
+              <View style={styles.findingStatusList}>
+                <View style={styles.findingStatusItem}>
+                  <Ionicons name="person-outline" size={20} color={colors.primary} />
+                  <View style={styles.findingStatusMeta}>
+                    <Text style={styles.findingStatusLabel}>Nearby drivers</Text>
+                    <Text style={styles.findingStatusValue}>Searching...</Text>
+                  </View>
+                </View>
+
+                <View style={styles.findingStatusItem}>
+                  <Ionicons name="time-outline" size={20} color={colors.primary} />
+                  <View style={styles.findingStatusMeta}>
+                    <Text style={styles.findingStatusLabel}>Estimated arrival</Text>
+                    <Text style={styles.findingStatusValue}>2-5 minutes</Text>
+                  </View>
+                </View>
+
+                <View style={styles.findingStatusItem}>
+                  <Ionicons name="shield-checkmark-outline" size={20} color={colors.success} />
+                  <View style={styles.findingStatusMeta}>
+                    <Text style={styles.findingStatusLabel}>Safety check</Text>
+                    <Text style={styles.findingStatusValue}>Driver verified</Text>
+                  </View>
+                </View>
+              </View>
+
+              {/* Dev Simulation Pill */}
+              <TouchableOpacity
+                style={styles.devSimButton}
+                onPress={() => setRideStep('DRIVER_ARRIVING')}
+              >
+                <Text style={styles.devSimText}>⏩ Dev: Driver Found</Text>
+              </TouchableOpacity>
+
+              {/* Outlined Cancel Button */}
+              <SecondaryButton
+                title="Cancel Ride"
+                variant="danger"
+                onPress={handleCancelRide}
+                style={styles.cancelRideBtn}
+              />
+            </View>
+          </View>
+        )}
+
+        {/* Screen 4: DRIVER ARRIVING (Screen 8 in Reference) */}
+        {rideStep === 'DRIVER_ARRIVING' && (
+          <View style={styles.flexOne}>
+            <AppHeader
+              title="Driver Arriving"
+              showBack={true}
+              onBack={handleCancelRide}
+            />
+
+            <ScrollView contentContainerStyle={styles.driverScrollContent}>
+              {/* Green Driver Status Card */}
+              <View style={styles.greenStatusCard}>
+                <View style={styles.driverAvatarSmall}>
+                  <Ionicons name="person" size={22} color="#FFFFFF" />
+                </View>
+                <View style={styles.greenStatusMeta}>
+                  <Text style={styles.greenStatusTitle}>Driver Arriving</Text>
+                  <Text style={styles.greenStatusSub}>2 min away</Text>
+                </View>
+                <TouchableOpacity
+                  style={styles.callCircleWhite}
+                  onPress={() => Alert.alert('Calling Driver', '+91 80000 00001')}
+                  accessibilityLabel="Call driver"
+                >
+                  <Ionicons name="call" size={18} color={colors.success} />
+                </TouchableOpacity>
+              </View>
+
+              {/* Map Preview */}
+              <MapPreviewCard
+                pickupName="Kakinada Railway Station"
+                dropName="Rama Rao Peta"
+                height={200}
+                style={styles.mapMargin}
+              />
+
+              {/* Driver Details Card */}
+              <View style={styles.driverDetailsCard}>
+                <View style={styles.driverInfoRow}>
+                  <View style={styles.driverAvatarMedium}>
+                    <Ionicons name="person" size={28} color={colors.primary} />
+                  </View>
+                  <View style={styles.driverMetaColumn}>
+                    <Text style={styles.driverNameText}>Ramesh Kumar</Text>
+                    <Text style={styles.driverRatingText}>★ 4.8 (248 rides)</Text>
+                    <Text style={styles.driverVehicleText}>{currentVehicle.driverVehicle}</Text>
+                  </View>
+                  <View style={styles.driverVehicleThumbContainer}>
+                    <Image
+                      source={currentVehicle.image}
+                      style={styles.driverVehicleThumb}
+                      resizeMode="contain"
                     />
                   </View>
                 </View>
 
-                <PrimaryButton
-                  title="Send OTP"
-                  onPress={handleRequestOtp}
-                  loading={loading}
-                  style={styles.authButton}
-                  accessibilityLabel="Send OTP verification code"
-                />
+                {/* Actions Row: Call, Chat, Share */}
+                <View style={styles.actionsRow}>
+                  <TouchableOpacity
+                    style={styles.actionCircleButton}
+                    onPress={() => Alert.alert('Call', 'Dialing Ramesh Kumar...')}
+                    accessibilityRole="button"
+                    accessibilityLabel="Call driver"
+                  >
+                    <View style={styles.actionIconCircle}>
+                      <Ionicons name="call-outline" size={20} color={colors.textPrimary} />
+                    </View>
+                    <Text style={styles.actionLabel}>Call</Text>
+                  </TouchableOpacity>
 
-                <Text style={styles.termsText}>
-                  By continuing, you agree to our Terms of Service & Privacy Policy
-                </Text>
-              </View>
-            </View>
-          )}
+                  <TouchableOpacity
+                    style={styles.actionCircleButton}
+                    onPress={() => Alert.alert('Chat', 'Chat with Ramesh Kumar')}
+                    accessibilityRole="button"
+                    accessibilityLabel="Chat with driver"
+                  >
+                    <View style={styles.actionIconCircle}>
+                      <Ionicons name="chatbubble-outline" size={20} color={colors.textPrimary} />
+                    </View>
+                    <Text style={styles.actionLabel}>Chat</Text>
+                  </TouchableOpacity>
 
-          {/* STEP 2: OTP VERIFICATION */}
-          {step === 'OTP' && (
-            <View style={styles.authContainer}>
-              <View style={styles.authCard}>
-                <View style={styles.authIconCircle}>
-                  <Ionicons name="shield-checkmark-outline" size={28} color={colors.primary} />
-                </View>
-                <Text style={styles.authTitle}>Enter Verification Code</Text>
-                <Text style={styles.authSub}>OTP sent to {phoneNumber}</Text>
-
-                <View style={styles.devHintBox}>
-                  <Ionicons name="information-circle-outline" size={16} color={colors.primary} />
-                  <Text style={styles.devHintText}>Development Test OTP: 123456</Text>
-                </View>
-
-                <View style={styles.inputGroup}>
-                  <Text style={styles.inputLabel}>6-Digit OTP</Text>
-                  <TextInput
-                    style={styles.otpInput}
-                    value={otp}
-                    onChangeText={setOtp}
-                    placeholder="123456"
-                    placeholderTextColor={colors.textMuted}
-                    keyboardType="number-pad"
-                    maxLength={6}
-                    accessibilityLabel="Enter 6-digit OTP code"
-                  />
+                  <TouchableOpacity
+                    style={styles.actionCircleButton}
+                    onPress={() => Alert.alert('Share Ride', 'Ride link copied to clipboard')}
+                    accessibilityRole="button"
+                    accessibilityLabel="Share ride details"
+                  >
+                    <View style={styles.actionIconCircle}>
+                      <Ionicons name="share-social-outline" size={20} color={colors.textPrimary} />
+                    </View>
+                    <Text style={styles.actionLabel}>Share</Text>
+                  </TouchableOpacity>
                 </View>
 
-                <PrimaryButton
-                  title="Verify & Continue"
-                  onPress={handleVerifyOtp}
-                  loading={loading}
-                  style={styles.authButton}
-                  accessibilityLabel="Verify OTP and Login"
-                />
-
+                {/* Green Share Promo Card */}
                 <TouchableOpacity
-                  style={styles.resendBtn}
-                  onPress={handleRequestOtp}
-                  accessibilityRole="button"
-                  accessibilityLabel="Resend OTP code"
+                  style={styles.sharePromoCard}
+                  onPress={() => Alert.alert('Share Live Location', 'Sharing location with emergency contacts.')}
                 >
-                  <Text style={styles.resendText}>Didn't receive code? Resend OTP</Text>
+                  <View style={styles.sharePromoIconCircle}>
+                    <Ionicons name="shield-checkmark" size={18} color={colors.success} />
+                  </View>
+                  <View style={styles.sharePromoTextColumn}>
+                    <Text style={styles.sharePromoTitle}>Share your ride</Text>
+                    <Text style={styles.sharePromoSub}>
+                      Share live location with friends & family
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+
+                {/* Dev Simulation: Start Trip */}
+                <TouchableOpacity
+                  style={styles.devSimButton}
+                  onPress={handleDriverArrived}
+                >
+                  <Text style={styles.devSimText}>⏩ Dev: Rider Picked Up (Start Trip)</Text>
                 </TouchableOpacity>
               </View>
-            </View>
-          )}
+            </ScrollView>
+          </View>
+        )}
 
-          {/* STEP 3: BOOKING SCREEN */}
-          {step === 'BOOKING' && user && (
-            <View style={styles.bookingContainer}>
-              {/* Greeting Section */}
-              <View style={styles.greetingSection}>
-                <View>
-                  <Text style={styles.greetingSub}>Hi, {user.name} 👋</Text>
-                  <Text style={styles.greetingTitle}>Where are you going today?</Text>
+        {/* Screen 5: RIDE IN PROGRESS (Screen 9 in Reference) */}
+        {rideStep === 'RIDE_IN_PROGRESS' && (
+          <View style={styles.flexOne}>
+            <AppHeader
+              title="Ride in Progress"
+              showBack={false}
+            />
+
+            <ScrollView contentContainerStyle={styles.driverScrollContent}>
+              {/* Blue Ride Status Card */}
+              <View style={styles.blueStatusCard}>
+                <View style={styles.driverAvatarSmall}>
+                  <Ionicons name="bicycle" size={22} color="#FFFFFF" />
+                </View>
+                <View style={styles.greenStatusMeta}>
+                  <Text style={styles.greenStatusTitle}>Ride in Progress</Text>
+                  <Text style={styles.greenStatusSub}>Driver is on the way</Text>
                 </View>
                 <TouchableOpacity
-                  style={styles.logoutPill}
-                  onPress={handleLogout}
-                  accessibilityRole="button"
-                  accessibilityLabel="Log out of rider account"
+                  style={styles.callCircleWhite}
+                  onPress={() => Alert.alert('Calling Driver', '+91 80000 00001')}
                 >
-                  <Ionicons name="log-out-outline" size={14} color={colors.danger} />
-                  <Text style={styles.logoutPillText}>Logout</Text>
+                  <Ionicons name="call" size={18} color={colors.primary} />
                 </TouchableOpacity>
               </View>
 
-              {/* Booking Card */}
-              <BookingCard
-                pickupLocation={pickup.name}
-                dropLocation={destination.name}
-                onSwapLocations={handleSwapLocations}
-                onCtaPress={() => handleBookRide(false)}
-                ctaTitle={`Request ${selectedVehicle} Ride`}
-                ctaLoading={loading}
-                style={styles.cardSpacing}
-              />
-
-              {/* Map Preview Card */}
+              {/* Map Preview */}
               <MapPreviewCard
-                pickupName={pickup.name}
-                dropName={destination.name}
-                distanceText="5.35 km"
-                durationText="13 mins"
-                gpsActive={gpsPermission === 'GRANTED'}
-                gpsCoordinates={currentGps}
-                style={styles.cardSpacing}
+                pickupName="Kakinada Railway Station"
+                dropName="Rama Rao Peta"
+                height={200}
+                style={styles.mapMargin}
               />
 
-              {locationFreshness !== 'FRESH' && (
-                <View style={styles.freshnessNotice}>
-                  <Ionicons name="cloud-download-outline" size={14} color={colors.warning} />
-                  <Text style={styles.freshnessNoticeText}>
-                    Updating GPS telemetry... ({locationFreshness})
-                  </Text>
+              {/* ETA / Distance Stats Row */}
+              <View style={styles.statsCardRow}>
+                <View style={styles.statBox}>
+                  <Text style={styles.statLabel}>ETA</Text>
+                  <Text style={styles.statValue}>2 min</Text>
                 </View>
-              )}
-
-              {/* Quick Actions */}
-              <SectionHeader title="Saved & Quick Places" />
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                style={styles.horizontalScroll}
-                contentContainerStyle={styles.chipsContainer}
-              >
-                <QuickActionChip
-                  label="Railway Station"
-                  iconName="train-outline"
-                  onPress={() => setPickup(KAKINADA_LOCATIONS[0]!)}
-                  isActive={pickup.name === KAKINADA_LOCATIONS[0]!.name}
-                />
-                <QuickActionChip
-                  label="Work / JNTU"
-                  iconName="briefcase-outline"
-                  onPress={() => setDestination(KAKINADA_LOCATIONS[5]!)}
-                  isActive={destination.name === KAKINADA_LOCATIONS[5]!.name}
-                />
-                <QuickActionChip
-                  label="Beach Road"
-                  iconName="water-outline"
-                  onPress={() => setDestination(KAKINADA_LOCATIONS[2]!)}
-                  isActive={destination.name === KAKINADA_LOCATIONS[2]!.name}
-                />
-                <QuickActionChip
-                  label="Bhanugudi"
-                  iconName="bookmark-outline"
-                  onPress={() => setDestination(KAKINADA_LOCATIONS[4]!)}
-                  isActive={destination.name === KAKINADA_LOCATIONS[4]!.name}
-                />
-              </ScrollView>
-
-              {/* Vehicle Type Selector */}
-              <SectionHeader title="Choose Vehicle" subtitle="Transparent Kakinada fares" />
-              <View style={styles.vehicleGrid}>
-                {(
-                  [
-                    { type: 'BIKE', name: 'Bike', fare: 76, eta: '3 min', icon: 'bicycle-outline' as const },
-                    { type: 'AUTO', name: 'Auto', fare: 108, eta: '5 min', icon: 'navigate-outline' as const },
-                    { type: 'CAB', name: 'Cab', fare: 164, eta: '8 min', icon: 'car-outline' as const },
-                  ] as const
-                ).map((v) => {
-                  const isSelected = selectedVehicle === v.type;
-                  return (
-                    <TouchableOpacity
-                      key={v.type}
-                      style={[
-                        styles.vehicleOptionCard,
-                        isSelected && styles.vehicleOptionCardActive,
-                      ]}
-                      onPress={() => setSelectedVehicle(v.type)}
-                      activeOpacity={0.7}
-                      accessibilityRole="button"
-                      accessibilityLabel={`${v.name}, ₹${v.fare}, ETA ${v.eta}`}
-                      accessibilityState={{ selected: isSelected }}
-                    >
-                      <View style={styles.vehicleIconCircle}>
-                        <Ionicons
-                          name={v.icon}
-                          size={24}
-                          color={isSelected ? colors.primary : colors.textPrimary}
-                        />
-                      </View>
-                      <Text style={[styles.vehicleName, isSelected && styles.vehicleTextActive]}>
-                        {v.name}
-                      </Text>
-                      <Text style={[styles.vehicleFare, isSelected && styles.vehicleFareActive]}>
-                        ₹{v.fare}
-                      </Text>
-                      <Text style={styles.vehicleEta}>{v.eta}</Text>
-                    </TouchableOpacity>
-                  );
-                })}
+                <View style={styles.statDivider} />
+                <View style={styles.statBox}>
+                  <Text style={styles.statLabel}>Distance</Text>
+                  <Text style={styles.statValue}>1.2 km</Text>
+                </View>
               </View>
 
-              {/* Payment Method Selector */}
-              <SectionHeader title="Payment Method" />
-              <View style={styles.paymentRow}>
-                {(['CASH', 'UPI'] as const).map((pm) => {
-                  const isSelected = paymentMethod === pm;
-                  return (
-                    <TouchableOpacity
-                      key={pm}
-                      style={[
-                        styles.paymentOptionCard,
-                        isSelected && styles.paymentOptionCardActive,
-                      ]}
-                      onPress={() => setPaymentMethod(pm)}
-                      activeOpacity={0.7}
-                      accessibilityRole="button"
-                      accessibilityLabel={`Pay via ${pm}`}
-                      accessibilityState={{ selected: isSelected }}
-                    >
-                      <Ionicons
-                        name={pm === 'CASH' ? 'cash-outline' : 'qr-code-outline'}
-                        size={20}
-                        color={isSelected ? colors.primary : colors.textSecondary}
-                      />
-                      <Text
-                        style={[
-                          styles.paymentName,
-                          isSelected && styles.paymentNameActive,
-                        ]}
-                      >
-                        {pm === 'CASH' ? 'Cash to Captain' : 'UPI / Online'}
-                      </Text>
-                      {isSelected && (
-                        <Ionicons name="checkmark-circle" size={18} color={colors.primary} />
-                      )}
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-            </View>
-          )}
-
-          {/* STEP 4: SEARCHING DRIVER */}
-          {step === 'SEARCHING' && currentRide && (
-            <View style={styles.searchingContainer}>
-              <View style={styles.stateCard}>
-                <View style={styles.stateIconCircle}>
-                  <Ionicons name="search" size={28} color={colors.primary} />
-                </View>
-                <Text style={styles.stateTitle}>Finding Your Captain...</Text>
-                <Text style={styles.stateSub}>Searching nearby verified captains in Kakinada</Text>
-
-                <View style={styles.statusChipWrapper}>
-                  <StatusChip status={currentRide.status} />
-                </View>
-
-                {/* Ride Summary Box */}
-                <View style={styles.detailSummaryBox}>
-                  <View style={styles.summaryItem}>
-                    <Text style={styles.summaryLabel}>Vehicle</Text>
-                    <Text style={styles.summaryValue}>{currentRide.vehicleType}</Text>
+              {/* Driver Details Card */}
+              <View style={styles.driverDetailsCard}>
+                <View style={styles.driverInfoRow}>
+                  <View style={styles.driverAvatarMedium}>
+                    <Ionicons name="person" size={28} color={colors.primary} />
                   </View>
-                  <View style={styles.summaryItem}>
-                    <Text style={styles.summaryLabel}>Estimated Fare</Text>
-                    <Text style={styles.summaryValue}>₹{currentRide.estimatedFare}</Text>
+                  <View style={styles.driverMetaColumn}>
+                    <Text style={styles.driverNameText}>Ramesh Kumar</Text>
+                    <Text style={styles.driverRatingText}>★ 4.8 (248 rides)</Text>
+                    <Text style={styles.driverVehicleText}>{currentVehicle.driverVehicle}</Text>
                   </View>
-                  <View style={styles.summaryItem}>
-                    <Text style={styles.summaryLabel}>Payment</Text>
-                    <Text style={styles.summaryValue}>{currentRide.paymentMethod}</Text>
+                  <View style={styles.driverVehicleThumbContainer}>
+                    <Image
+                      source={currentVehicle.image}
+                      style={styles.driverVehicleThumb}
+                      resizeMode="contain"
+                    />
                   </View>
                 </View>
 
-                <SecondaryButton
-                  title="Cancel Request"
-                  variant="outline"
-                  onPress={() => {
-                    setCurrentRide(null);
-                    setStep('BOOKING');
-                  }}
-                  style={styles.cancelBtn}
-                />
+                {/* Actions: Call, Chat, Share */}
+                <View style={styles.actionsRow}>
+                  <TouchableOpacity
+                    style={styles.actionCircleButton}
+                    onPress={() => Alert.alert('Call', 'Dialing driver...')}
+                  >
+                    <View style={styles.actionIconCircle}>
+                      <Ionicons name="call-outline" size={20} color={colors.textPrimary} />
+                    </View>
+                    <Text style={styles.actionLabel}>Call</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={styles.actionCircleButton}
+                    onPress={() => Alert.alert('Chat', 'Opening chat...')}
+                  >
+                    <View style={styles.actionIconCircle}>
+                      <Ionicons name="chatbubble-outline" size={20} color={colors.textPrimary} />
+                    </View>
+                    <Text style={styles.actionLabel}>Chat</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={styles.actionCircleButton}
+                    onPress={() => Alert.alert('Share', 'Sharing ride link...')}
+                  >
+                    <View style={styles.actionIconCircle}>
+                      <Ionicons name="share-social-outline" size={20} color={colors.textPrimary} />
+                    </View>
+                    <Text style={styles.actionLabel}>Share</Text>
+                  </TouchableOpacity>
+                </View>
+
+                {/* Prominent Red SOS Button */}
+                <TouchableOpacity
+                  style={styles.redSosButton}
+                  onPress={handleSos}
+                  activeOpacity={0.8}
+                  accessibilityRole="button"
+                  accessibilityLabel="Emergency SOS Button"
+                >
+                  <Ionicons name="shield" size={18} color={colors.danger} />
+                  <Text style={styles.redSosText}>SOS</Text>
+                </TouchableOpacity>
+
+                {/* Dev Simulation: End Trip */}
+                <TouchableOpacity
+                  style={styles.devSimButton}
+                  onPress={handleCompleteRide}
+                >
+                  <Text style={styles.devSimText}>⏩ Dev: Complete Trip</Text>
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
+
+            <BottomTabBar activeTab="home" />
+          </View>
+        )}
+
+        {/* Screen 6: RIDE COMPLETED (Screen 10 in Reference) */}
+        {rideStep === 'RIDE_COMPLETED' && (
+          <View style={styles.flexOne}>
+            <ScrollView contentContainerStyle={styles.completedScrollContent}>
+              {/* Green Header Banner */}
+              <View style={styles.completedHeaderBanner}>
+                <View style={styles.completedCheckCircle}>
+                  <Ionicons name="checkmark" size={32} color={colors.success} />
+                </View>
+                <Text style={styles.completedTitle}>Ride Completed</Text>
+                <Text style={styles.completedSub}>Thank you for riding with us!</Text>
               </View>
 
-              <MapPreviewCard
-                pickupName={currentRide.pickupAddress}
-                dropName={currentRide.dropAddress}
-                style={styles.cardSpacing}
-              />
-            </View>
-          )}
-
-          {/* STEP 5: ASSIGNED / IN PROGRESS / COMPLETED */}
-          {step === 'ASSIGNED' && currentRide && (
-            <View style={styles.assignedContainer}>
-              <View style={styles.stateCard}>
-                <View style={styles.assignedHeaderRow}>
+              {/* Total Fare Card */}
+              <View style={styles.completedFareCard}>
+                <View style={styles.fareRowCompleted}>
                   <View>
-                    <Text style={styles.tripStatusTitle}>
-                      {currentRide.status === 'DRIVER_ASSIGNED' && 'Captain Assigned! 🚖'}
-                      {currentRide.status === 'DRIVER_ARRIVING' && 'Captain On The Way 🚗'}
-                      {currentRide.status === 'DRIVER_ARRIVED' && 'Captain Has Arrived 📍'}
-                      {currentRide.status === 'RIDE_STARTED' && 'Trip In Progress 🛣️'}
-                      {currentRide.status === 'RIDE_COMPLETED' && 'Arrived at Destination 🏁'}
-                      {currentRide.status === 'PAYMENT_PENDING' && 'Payment Pending ⏳'}
-                      {currentRide.status === 'COMPLETED' && 'Trip Completed & Settled 🎉'}
-                      {currentRide.status === 'PAYMENT_FAILED' && 'Payment Failed ⚠️'}
-                    </Text>
-                    <Text style={styles.tripStatusSub}>Ride #{currentRide.id}</Text>
+                    <Text style={styles.fareLabelCompleted}>Total Fare</Text>
+                    <Text style={styles.fareAmountCompleted}>₹ 48</Text>
                   </View>
-                  <StatusChip status={currentRide.status} />
+                  <TouchableOpacity
+                    onPress={() => Alert.alert('Fare Breakdown', 'Base Fare: ₹30\nDistance: ₹15\nTaxes: ₹3\nTotal: ₹48')}
+                  >
+                    <Text style={styles.viewDetailsLink}>View Details &gt;</Text>
+                  </TouchableOpacity>
                 </View>
 
-                {/* Driver Profile Card */}
-                {currentRide.driver && (
-                  <View style={styles.driverProfileBox}>
-                    <View style={styles.driverAvatar}>
-                      <Ionicons name="person" size={26} color={colors.primary} />
-                    </View>
-                    <View style={styles.driverMeta}>
-                      <Text style={styles.driverName}>{currentRide.driver.name}</Text>
-                      <Text style={styles.driverVehicle}>
-                        {currentRide.driver.vehicleModel} • {currentRide.driver.regNumber}
-                      </Text>
-                    </View>
-                    <View style={styles.driverActions}>
-                      <TouchableOpacity
-                        style={styles.driverActionBtn}
-                        accessibilityLabel="Call Captain"
-                        accessibilityRole="button"
-                      >
-                        <Ionicons name="call" size={18} color={colors.success} />
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        style={styles.driverActionBtn}
-                        accessibilityLabel="Message Captain"
-                        accessibilityRole="button"
-                      >
-                        <Ionicons name="chatbubble-ellipses" size={18} color={colors.primary} />
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-                )}
+                <View style={styles.sheetDivider} />
 
-                {/* Locations Summary */}
-                <View style={styles.detailSummaryBox}>
-                  <View style={styles.locationSummaryRow}>
-                    <View style={styles.pickupDotSmall} />
-                    <Text style={styles.locationSummaryText} numberOfLines={1}>
-                      {currentRide.pickupAddress}
-                    </Text>
+                {/* Cash Payment Row */}
+                <View style={styles.paymentCompletedRow}>
+                  <View style={styles.paymentLeftCompleted}>
+                    <Ionicons name="cash-outline" size={20} color={colors.textPrimary} />
+                    <Text style={styles.paymentMethodCompleted}>Cash Payment</Text>
                   </View>
-                  <View style={styles.locationDivider} />
-                  <View style={styles.locationSummaryRow}>
-                    <View style={styles.dropSquareSmall} />
-                    <Text style={styles.locationSummaryText} numberOfLines={1}>
-                      {currentRide.dropAddress}
-                    </Text>
+                  <View style={styles.paidChip}>
+                    <Text style={styles.paidChipText}>Paid</Text>
                   </View>
                 </View>
 
-                {/* Interactive Payment Actions */}
-                {(currentRide.status === 'PAYMENT_PENDING' || currentRide.status === 'PAYMENT_FAILED') && (
-                  <View style={styles.paymentActionsBox}>
-                    <Text style={styles.paymentActionTitle}>
-                      Total Fare: ₹{currentRide.estimatedFare} ({currentRide.paymentMethod})
-                    </Text>
-                    {currentRide.paymentMethod === 'CASH' ? (
-                      <View style={styles.cashInstructions}>
-                        <Text style={styles.cashText}>
-                          💵 Please pay ₹{currentRide.estimatedFare} cash to Captain {currentRide.driver?.name}.
-                        </Text>
-                        <SecondaryButton
-                          title="Switch to UPI Payment"
-                          onPress={() => setCurrentRide((prev) => (prev ? { ...prev, paymentMethod: 'UPI' } : null))}
-                          style={styles.switchMethodBtn}
+                <View style={styles.sheetDivider} />
+
+                {/* Driver Info */}
+                <View style={styles.driverCompletedRow}>
+                  <View style={styles.driverAvatarSmallBlue}>
+                    <Ionicons name="person" size={20} color={colors.primary} />
+                  </View>
+                  <View style={styles.driverCompletedMeta}>
+                    <Text style={styles.driverCompletedName}>Ramesh Kumar</Text>
+                    <Text style={styles.driverCompletedRating}>★ 4.8 • 248 rides</Text>
+                  </View>
+                </View>
+
+                <View style={styles.sheetDivider} />
+
+                {/* Rating Section */}
+                <View style={styles.ratingSection}>
+                  <Text style={styles.howWasRideText}>How was your ride?</Text>
+                  <View style={styles.starsRow}>
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <TouchableOpacity
+                        key={star}
+                        onPress={() => setUserRating(star)}
+                        accessibilityLabel={`Rate ${star} star`}
+                      >
+                        <Ionicons
+                          name={star <= userRating ? 'star' : 'star-outline'}
+                          size={32}
+                          color={star <= userRating ? '#F59E0B' : colors.textMuted}
                         />
-                      </View>
-                    ) : (
-                      <View style={styles.upiActions}>
-                        <PrimaryButton
-                          title={`Pay ₹${currentRide.estimatedFare} via UPI`}
-                          onPress={() => {
-                            setLoading(true);
-                            setTimeout(() => {
-                              setLoading(false);
-                              setCurrentRide((prev) => (prev ? { ...prev, status: 'COMPLETED' } : null));
-                            }, 1200);
-                          }}
-                          loading={loading}
-                          variant="success"
-                          style={styles.upiPayBtn}
-                        />
-                        <SecondaryButton
-                          title="Simulate UPI Failure"
-                          variant="danger"
-                          onPress={() => setCurrentRide((prev) => (prev ? { ...prev, status: 'PAYMENT_FAILED' } : null))}
-                        />
-                      </View>
-                    )}
-                  </View>
-                )}
-
-                {/* Ride Cancellation if allowed */}
-                {(currentRide.status === 'DRIVER_ASSIGNED' || currentRide.status === 'DRIVER_ARRIVING') && (
-                  <SecondaryButton
-                    title="Cancel Ride"
-                    variant="danger"
-                    onPress={() => {
-                      setCurrentRide((prev) => (prev ? { ...prev, status: 'CANCELLED_BY_RIDER' } : null));
-                      setError('Ride cancelled by you.');
-                      setTimeout(() => setStep('BOOKING'), 1200);
-                    }}
-                    style={styles.actionBtnMargin}
-                  />
-                )}
-
-                {/* Dev Simulation Controls */}
-                <View style={styles.devSimulationPanel}>
-                  <Text style={styles.devSimTitle}>🧪 Dev Simulation: Advance State</Text>
-                  <View style={styles.simButtonsRow}>
-                    {currentRide.status === 'DRIVER_ASSIGNED' && (
-                      <TouchableOpacity
-                        style={styles.simPill}
-                        onPress={() => setCurrentRide((prev) => (prev ? { ...prev, status: 'DRIVER_ARRIVING' } : null))}
-                      >
-                        <Text style={styles.simPillText}>Arriving ⏩</Text>
                       </TouchableOpacity>
-                    )}
-                    {currentRide.status === 'DRIVER_ARRIVING' && (
-                      <TouchableOpacity
-                        style={styles.simPill}
-                        onPress={() => setCurrentRide((prev) => (prev ? { ...prev, status: 'DRIVER_ARRIVED' } : null))}
-                      >
-                        <Text style={styles.simPillText}>Arrived ⏩</Text>
-                      </TouchableOpacity>
-                    )}
-                    {currentRide.status === 'DRIVER_ARRIVED' && (
-                      <TouchableOpacity
-                        style={styles.simPill}
-                        onPress={() => setCurrentRide((prev) => (prev ? { ...prev, status: 'RIDE_STARTED' } : null))}
-                      >
-                        <Text style={styles.simPillText}>Start Trip ⏩</Text>
-                      </TouchableOpacity>
-                    )}
-                    {currentRide.status === 'RIDE_STARTED' && (
-                      <TouchableOpacity
-                        style={styles.simPill}
-                        onPress={() => setCurrentRide((prev) => (prev ? { ...prev, status: 'PAYMENT_PENDING' } : null))}
-                      >
-                        <Text style={styles.simPillText}>End Trip ⏩</Text>
-                      </TouchableOpacity>
-                    )}
-                    {currentRide.status === 'PAYMENT_PENDING' && (
-                      <TouchableOpacity
-                        style={styles.simPill}
-                        onPress={() => setCurrentRide((prev) => (prev ? { ...prev, status: 'COMPLETED' } : null))}
-                      >
-                        <Text style={styles.simPillText}>Confirm Cash (Captain) ⏩</Text>
-                      </TouchableOpacity>
-                    )}
+                    ))}
                   </View>
                 </View>
 
-                {currentRide.status === 'COMPLETED' && (
-                  <PrimaryButton
-                    title="Book Another Ride"
-                    onPress={() => setStep('BOOKING')}
-                    style={styles.actionBtnMargin}
-                  />
-                )}
-              </View>
-
-              <MapPreviewCard
-                pickupName={currentRide.pickupAddress}
-                dropName={currentRide.dropAddress}
-                style={styles.cardSpacing}
-              />
-            </View>
-          )}
-
-          {/* STEP 6: NO DRIVER */}
-          {step === 'NO_DRIVER' && currentRide && (
-            <View style={styles.noDriverContainer}>
-              <View style={styles.stateCard}>
-                <View style={[styles.stateIconCircle, { backgroundColor: colors.dangerLight }]}>
-                  <Ionicons name="car-outline" size={28} color={colors.danger} />
-                </View>
-                <Text style={styles.stateTitle}>No Captains Available</Text>
-                <Text style={styles.stateSub}>
-                  All captains in Kakinada are currently occupied. Please try again in a few moments.
-                </Text>
-
-                <View style={styles.statusChipWrapper}>
-                  <StatusChip status="CANCELLED_NO_DRIVER" />
-                </View>
-
+                {/* Submit Rating Button */}
                 <PrimaryButton
-                  title="Try Again"
-                  onPress={() => setStep('BOOKING')}
-                  style={styles.actionBtnMargin}
+                  title={ratingSubmitted ? 'Rating Submitted ✓' : 'Submit Rating'}
+                  onPress={() => {
+                    setRatingSubmitted(true);
+                    Alert.alert('Thank you!', 'Your feedback helps keep Kakinada rides safe.');
+                  }}
+                  disabled={ratingSubmitted}
+                  style={styles.submitRatingBtn}
+                />
+
+                {/* Book Another Ride */}
+                <SecondaryButton
+                  title="Book Another Ride"
+                  onPress={handleResetToBooking}
+                  style={styles.bookAnotherBtn}
                 />
               </View>
-            </View>
-          )}
-        </ScrollView>
-
-        {/* Global Bottom Navigation Bar */}
-        <BottomTabBar activeTab="home" />
+            </ScrollView>
+          </View>
+        )}
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -755,522 +916,815 @@ const styles = StyleSheet.create({
   keyboardContainer: {
     flex: 1,
   },
-  scrollView: {
+  flexOne: {
     flex: 1,
   },
-  scrollContent: {
+
+  // SPLASH SCREEN STYLES
+  splashContainer: {
+    flex: 1,
+    backgroundColor: '#0F172A',
+  },
+  splashBgImage: {
+    flex: 1,
+    width: '100%',
+    height: '100%',
+  },
+  splashSafeOverlay: {
+    flex: 1,
+    justifyContent: 'space-between',
+  },
+  splashTop: {
+    alignItems: 'center',
+    paddingTop: Platform.OS === 'android' ? 44 : 20,
+  },
+  splashCard: {
+    backgroundColor: '#FFFFFF',
+    paddingVertical: 18,
+    paddingHorizontal: 28,
+    borderRadius: borderRadius.lg,
+    ...shadows.elevated,
+  },
+  splashBottom: {
+    paddingHorizontal: spacing.lg,
+    paddingBottom: 40,
+  },
+  splashBottomScrim: {
+    backgroundColor: 'rgba(15, 23, 42, 0.82)',
+    paddingVertical: spacing.lg,
+    paddingHorizontal: spacing.xl,
+    borderRadius: borderRadius.lg,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  splashSub: {
+    fontSize: fontSizes.md,
+    color: '#E2E8F0',
+    fontWeight: '500',
+  },
+  splashCity: {
+    fontSize: 32,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    letterSpacing: -0.5,
+    marginTop: 4,
+  },
+  waveAccent: {
+    marginTop: 4,
+  },
+  splashTapPrompt: {
+    fontSize: fontSizes.xs,
+    color: '#38BDF8',
+    marginTop: spacing.md,
+    fontWeight: '600',
+  },
+
+  // ONBOARDING SCREEN STYLES
+  onboardingContainer: {
+    flex: 1,
+    backgroundColor: colors.surface,
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+  },
+  onboardingTopRow: {
+    height: 44,
+    alignItems: 'flex-end',
+    justifyContent: 'center',
+  },
+  skipButton: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+  },
+  skipText: {
+    fontSize: fontSizes.md,
+    color: colors.primary,
+    fontWeight: '600',
+  },
+  illustrationArea: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginVertical: spacing.md,
+  },
+  onboardingIllustrationImage: {
+    width: '100%',
+    height: 220,
+    maxHeight: 250,
+  },
+  onboardingTextSection: {
+    alignItems: 'center',
+  },
+  onboardingHeading: {
+    fontSize: 28,
+    fontWeight: '800',
+    color: colors.textPrimary,
+    textAlign: 'center',
+    lineHeight: 36,
+    marginBottom: spacing.sm,
+  },
+  onboardingBody: {
+    fontSize: fontSizes.sm,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: spacing.lg,
+  },
+  paginationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  activePill: {
+    width: 24,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: colors.primary,
+  },
+  inactiveDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#CBD5E1',
+  },
+  onboardingBottomActions: {
+    marginBottom: spacing.lg,
+  },
+  getStartedButton: {
+    height: dimensions.buttonHeight,
+    borderRadius: borderRadius.md,
+    backgroundColor: colors.primary,
+    marginBottom: spacing.md,
+  },
+  loginLinkButton: {
+    alignItems: 'center',
+    paddingVertical: spacing.xs,
+  },
+  alreadyHaveText: {
+    fontSize: fontSizes.sm,
+    color: colors.textSecondary,
+  },
+  loginLinkBold: {
+    color: colors.primary,
+    fontWeight: '700',
+  },
+
+  // BOOKING (HOME) STYLES
+  bookingScrollContent: {
     padding: spacing.md,
     paddingBottom: spacing.xl,
   },
-  errorBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.dangerLight,
-    padding: spacing.sm,
-    borderRadius: borderRadius.sm,
-    marginBottom: spacing.md,
-    gap: spacing.xs,
-  },
-  errorText: {
-    color: colors.danger,
-    fontSize: fontSizes.sm,
-    fontWeight: '600',
-    flex: 1,
-  },
-  authContainer: {
-    paddingTop: spacing.lg,
-  },
-  authCard: {
+  locationCard: {
     backgroundColor: colors.surface,
-    borderRadius: borderRadius.lg,
-    padding: spacing.xl,
-    alignItems: 'center',
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
     borderWidth: 1,
     borderColor: colors.border,
+    marginBottom: spacing.md,
     ...shadows.card,
   },
-  authIconCircle: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: colors.primaryLight,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacing.md,
-  },
-  authTitle: {
-    fontSize: fontSizes.xl,
-    fontWeight: '700',
-    color: colors.textPrimary,
-    marginBottom: spacing.xs,
-    textAlign: 'center',
-  },
-  authSub: {
-    fontSize: fontSizes.sm,
-    color: colors.textSecondary,
-    textAlign: 'center',
-    marginBottom: spacing.lg,
-  },
-  devHintBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.primaryLight,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs + 2,
-    borderRadius: borderRadius.sm,
-    marginBottom: spacing.md,
-    gap: 6,
-  },
-  devHintText: {
-    fontSize: fontSizes.xs,
-    color: colors.primaryDark,
-    fontWeight: '600',
-  },
-  inputGroup: {
-    width: '100%',
-    marginBottom: spacing.md,
-  },
-  inputLabel: {
-    fontSize: fontSizes.xs,
-    fontWeight: '600',
-    color: colors.textSecondary,
-    marginBottom: spacing.xs,
-  },
-  phoneInputRow: {
+  locationRow: {
     flexDirection: 'row',
     alignItems: 'center',
   },
-  countryCodeBadge: {
-    backgroundColor: colors.background,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: borderRadius.sm,
-    paddingHorizontal: spacing.md,
-    height: dimensions.inputHeight,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: spacing.xs,
+  greenDotIndicator: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: colors.success,
+    marginRight: spacing.sm,
   },
-  countryCodeText: {
-    fontSize: fontSizes.md,
-    fontWeight: '700',
-    color: colors.textPrimary,
+  redDotIndicator: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: colors.danger,
+    marginRight: spacing.sm,
   },
-  phoneInput: {
+  locationTextColumn: {
     flex: 1,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: borderRadius.sm,
-    paddingHorizontal: spacing.md,
-    height: dimensions.inputHeight,
-    fontSize: fontSizes.md,
-    color: colors.textPrimary,
-    fontWeight: '600',
   },
-  otpInput: {
-    width: '100%',
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: borderRadius.sm,
-    paddingHorizontal: spacing.md,
-    height: dimensions.inputHeight,
-    fontSize: fontSizes.lg,
-    color: colors.textPrimary,
-    fontWeight: '700',
-    textAlign: 'center',
-    letterSpacing: 8,
-  },
-  authButton: {
-    width: '100%',
-    marginTop: spacing.xs,
-  },
-  termsText: {
-    fontSize: fontSizes.xs - 1,
+  locationLabel: {
+    fontSize: 10,
     color: colors.textMuted,
-    textAlign: 'center',
-    marginTop: spacing.md,
-    lineHeight: 16,
-  },
-  resendBtn: {
-    marginTop: spacing.md,
-    minHeight: dimensions.minTouchTarget,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  resendText: {
-    fontSize: fontSizes.sm,
-    color: colors.primary,
     fontWeight: '600',
+    textTransform: 'uppercase',
   },
-  bookingContainer: {
-    width: '100%',
+  locationValue: {
+    fontSize: fontSizes.sm + 1,
+    color: colors.textPrimary,
+    fontWeight: '700',
+    marginTop: 1,
   },
-  greetingSection: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
+  locationActionIcon: {
+    width: 36,
+    height: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  locationDivider: {
+    height: 1,
+    backgroundColor: colors.border,
+    marginVertical: spacing.sm,
+    marginLeft: 20,
+  },
+  mapMargin: {
     marginBottom: spacing.md,
   },
-  greetingSub: {
-    fontSize: fontSizes.sm,
-    color: colors.textSecondary,
-    fontWeight: '600',
+  vehicleSection: {
+    marginBottom: spacing.md,
   },
-  greetingTitle: {
-    fontSize: fontSizes.xl,
+  sectionHeading: {
+    fontSize: fontSizes.md,
     fontWeight: '700',
     color: colors.textPrimary,
-    letterSpacing: -0.3,
+    marginBottom: spacing.sm,
   },
-  logoutPill: {
+  vehicleCardsRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: colors.dangerLight,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    borderRadius: borderRadius.full,
+    gap: spacing.sm,
   },
-  logoutPillText: {
-    fontSize: fontSizes.xs,
-    color: colors.danger,
-    fontWeight: '700',
-  },
-  cardSpacing: {
-    marginBottom: spacing.md,
-  },
-  horizontalScroll: {
-    marginBottom: spacing.md,
-  },
-  chipsContainer: {
-    paddingRight: spacing.md,
-  },
-  vehicleGrid: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: spacing.md,
-    gap: spacing.xs,
-  },
-  vehicleOptionCard: {
+  vehicleCard: {
     flex: 1,
     backgroundColor: colors.surface,
+    borderRadius: borderRadius.md,
+    paddingVertical: 10,
+    paddingHorizontal: 4,
+    alignItems: 'center',
+    justifyContent: 'space-between',
     borderWidth: 1.5,
     borderColor: colors.border,
-    borderRadius: borderRadius.md,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.xs,
-    alignItems: 'center',
+    minHeight: 126,
     ...shadows.card,
   },
-  vehicleOptionCardActive: {
+  vehicleCardActive: {
     borderColor: colors.primary,
-    backgroundColor: colors.primaryLight,
+    backgroundColor: '#EFF6FF',
   },
-  vehicleIconCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: colors.background,
+  vehicleImageContainer: {
+    width: '100%',
+    height: 50,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: spacing.xs,
+    paddingHorizontal: 2,
+    marginBottom: 4,
   },
-  vehicleName: {
+  vehicleImageContainerActive: {
+    transform: [{ scale: 1.05 }],
+  },
+  vehicleCardImage: {
+    width: '100%',
+    height: '100%',
+  },
+  vehicleTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: colors.textSecondary,
+    marginBottom: 2,
+  },
+  vehicleTitleActive: {
+    color: colors.textPrimary,
+  },
+  vehicleFareText: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: colors.textPrimary,
+    marginBottom: 1,
+  },
+  vehicleFareTextActive: {
+    color: colors.primary,
+  },
+  vehicleEtaText: {
+    fontSize: 11,
+    color: colors.textMuted,
+    fontWeight: '500',
+  },
+  fareSummaryBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: colors.surface,
+    padding: spacing.md,
+    borderRadius: borderRadius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    marginBottom: spacing.md,
+  },
+  fareLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  estimatedFareLabel: {
+    fontSize: fontSizes.xs,
+    color: colors.textSecondary,
+    fontWeight: '500',
+  },
+  estimatedFareValue: {
     fontSize: fontSizes.sm,
+    fontWeight: '800',
+    color: colors.textPrimary,
+  },
+  viewDetailsLink: {
+    fontSize: fontSizes.xs,
+    fontWeight: '700',
+    color: colors.primary,
+  },
+  bookRideButton: {
+    height: dimensions.buttonHeight,
+    borderRadius: borderRadius.md,
+    backgroundColor: colors.primary,
+  },
+
+  // CONFIRM RIDE & BOTTOM SHEET STYLES
+  confirmMapContainer: {
+    flex: 1,
+  },
+  bottomSheetCard: {
+    backgroundColor: colors.surface,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: spacing.lg,
+    ...shadows.elevated,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  sheetVehicleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  sheetVehicleImageContainer: {
+    width: 64,
+    height: 46,
+    borderRadius: borderRadius.sm,
+    backgroundColor: '#F8FAFC',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: 2,
+  },
+  sheetVehicleImage: {
+    width: '90%',
+    height: '90%',
+  },
+  sheetVehicleMeta: {
+    flex: 1,
+  },
+  sheetVehicleName: {
+    fontSize: fontSizes.md,
     fontWeight: '700',
     color: colors.textPrimary,
   },
-  vehicleTextActive: {
-    color: colors.primaryDark,
-  },
-  vehicleFare: {
-    fontSize: fontSizes.sm,
-    fontWeight: '700',
+  sheetVehicleEta: {
+    fontSize: fontSizes.xs,
     color: colors.textSecondary,
-    marginTop: 2,
   },
-  vehicleFareActive: {
-    color: colors.primary,
+  sheetVehiclePrice: {
+    fontSize: fontSizes.lg,
+    fontWeight: '800',
+    color: colors.textPrimary,
   },
-  vehicleEta: {
-    fontSize: fontSizes.xs - 1,
-    color: colors.textMuted,
-    marginTop: 2,
+  sheetDivider: {
+    height: 1,
+    backgroundColor: colors.border,
+    marginVertical: spacing.md,
   },
-  paymentRow: {
+  sheetOptionRow: {
     flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: spacing.xs,
+  },
+  sheetOptionLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  sheetOptionText: {
+    fontSize: fontSizes.sm,
+    fontWeight: '600',
+    color: colors.textPrimary,
+  },
+  confirmBookingButton: {
+    height: dimensions.buttonHeight,
+    borderRadius: borderRadius.md,
+    backgroundColor: colors.brandGreen,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: spacing.lg,
+    ...shadows.button,
+  },
+  confirmBookingText: {
+    fontSize: fontSizes.md,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+
+  // FINDING DRIVER STYLES
+  findingImageCircle: {
+    width: 76,
+    height: 76,
+    borderRadius: 38,
+    backgroundColor: '#EFF6FF',
+    borderWidth: 2,
+    borderColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    alignSelf: 'center',
+    marginBottom: spacing.sm,
+    padding: 6,
+    ...shadows.card,
+  },
+  findingVehicleImage: {
+    width: '85%',
+    height: '85%',
+  },
+  findingTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: colors.textPrimary,
+    textAlign: 'center',
+  },
+  findingSub: {
+    fontSize: fontSizes.xs,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    marginTop: 2,
+    marginBottom: spacing.md,
+  },
+  findingStatusList: {
     gap: spacing.sm,
     marginBottom: spacing.md,
   },
-  paymentOptionCard: {
-    flex: 1,
+  findingStatusItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: colors.surface,
-    borderWidth: 1.5,
-    borderColor: colors.border,
-    borderRadius: borderRadius.md,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    minHeight: dimensions.buttonHeight,
+    gap: spacing.sm,
   },
-  paymentOptionCardActive: {
-    borderColor: colors.primary,
-    backgroundColor: colors.primaryLight,
+  findingStatusMeta: {
+    flex: 1,
   },
-  paymentName: {
-    fontSize: fontSizes.sm,
+  findingStatusLabel: {
+    fontSize: fontSizes.xs,
     fontWeight: '600',
     color: colors.textPrimary,
-    flex: 1,
-    marginLeft: spacing.xs,
   },
-  paymentNameActive: {
-    color: colors.primaryDark,
+  findingStatusValue: {
+    fontSize: 11,
+    color: colors.textSecondary,
+  },
+  devSimButton: {
+    backgroundColor: '#FEF3C7',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: borderRadius.full,
+    alignSelf: 'center',
+    marginVertical: spacing.xs,
+  },
+  devSimText: {
+    fontSize: 11,
     fontWeight: '700',
+    color: '#B45309',
   },
-  searchingContainer: {
-    width: '100%',
+  cancelRideBtn: {
+    marginTop: spacing.xs,
   },
-  stateCard: {
+
+  // DRIVER ARRIVING & IN PROGRESS STYLES
+  driverScrollContent: {
+    padding: spacing.md,
+    paddingBottom: spacing.xl,
+  },
+  greenStatusCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.successDark,
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
+    marginBottom: spacing.sm,
+  },
+  blueStatusCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.primary,
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
+    marginBottom: spacing.sm,
+  },
+  driverAvatarSmall: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: spacing.sm,
+  },
+  greenStatusMeta: {
+    flex: 1,
+  },
+  greenStatusTitle: {
+    fontSize: fontSizes.md,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  greenStatusSub: {
+    fontSize: fontSizes.xs,
+    color: 'rgba(255, 255, 255, 0.85)',
+  },
+  callCircleWhite: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  driverDetailsCard: {
     backgroundColor: colors.surface,
-    borderRadius: borderRadius.lg,
-    padding: spacing.lg,
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
     borderWidth: 1,
     borderColor: colors.border,
-    marginBottom: spacing.md,
-    alignItems: 'center',
     ...shadows.card,
   },
-  stateIconCircle: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+  driverInfoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: spacing.md,
+  },
+  driverAvatarMedium: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
     backgroundColor: colors.primaryLight,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: spacing.sm,
+    marginRight: spacing.md,
   },
-  stateTitle: {
-    fontSize: fontSizes.lg,
+  driverMetaColumn: {
+    flex: 1,
+  },
+  driverNameText: {
+    fontSize: fontSizes.md,
     fontWeight: '700',
     color: colors.textPrimary,
-    textAlign: 'center',
   },
-  stateSub: {
+  driverRatingText: {
+    fontSize: fontSizes.xs,
+    color: '#D97706',
+    fontWeight: '600',
+    marginTop: 1,
+  },
+  driverVehicleText: {
     fontSize: fontSizes.xs,
     color: colors.textSecondary,
-    textAlign: 'center',
     marginTop: 2,
-    marginBottom: spacing.sm,
   },
-  statusChipWrapper: {
-    marginVertical: spacing.xs,
-  },
-  detailSummaryBox: {
-    width: '100%',
-    backgroundColor: colors.background,
+  driverVehicleThumbContainer: {
+    width: 54,
+    height: 38,
     borderRadius: borderRadius.sm,
-    padding: spacing.md,
-    marginVertical: spacing.md,
-  },
-  summaryItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 4,
-  },
-  summaryLabel: {
-    fontSize: fontSizes.xs,
-    color: colors.textSecondary,
-  },
-  summaryValue: {
-    fontSize: fontSizes.xs,
-    fontWeight: '700',
-    color: colors.textPrimary,
-  },
-  cancelBtn: {
-    width: '100%',
-  },
-  assignedContainer: {
-    width: '100%',
-  },
-  assignedHeaderRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    backgroundColor: '#F1F5F9',
     alignItems: 'center',
-    width: '100%',
-    marginBottom: spacing.sm,
+    justifyContent: 'center',
+    marginLeft: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: 2,
   },
-  tripStatusTitle: {
-    fontSize: fontSizes.md + 1,
-    fontWeight: '700',
-    color: colors.textPrimary,
+  driverVehicleThumb: {
+    width: '90%',
+    height: '90%',
   },
-  tripStatusSub: {
-    fontSize: fontSizes.xs,
-    color: colors.textSecondary,
-  },
-  driverProfileBox: {
+  actionsRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    width: '100%',
-    backgroundColor: colors.background,
-    borderRadius: borderRadius.md,
-    padding: spacing.sm,
-    marginBottom: spacing.sm,
+    justifyContent: 'space-around',
+    marginVertical: spacing.sm,
   },
-  driverAvatar: {
+  actionCircleButton: {
+    alignItems: 'center',
+  },
+  actionIconCircle: {
     width: 44,
     height: 44,
     borderRadius: 22,
+    borderWidth: 1.5,
+    borderColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 4,
+  },
+  actionLabel: {
+    fontSize: fontSizes.xs,
+    color: colors.textSecondary,
+    fontWeight: '500',
+  },
+  sharePromoCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F0FDF4',
+    borderRadius: borderRadius.md,
+    padding: spacing.sm,
+    borderWidth: 1,
+    borderColor: '#BBF7D0',
+    marginTop: spacing.sm,
+    gap: spacing.sm,
+  },
+  sharePromoIconCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#DCFCE7',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sharePromoTextColumn: {
+    flex: 1,
+  },
+  sharePromoTitle: {
+    fontSize: fontSizes.xs + 1,
+    fontWeight: '700',
+    color: '#166534',
+  },
+  sharePromoSub: {
+    fontSize: 10,
+    color: '#15803D',
+  },
+  statsCardRow: {
+    flexDirection: 'row',
+    backgroundColor: colors.surface,
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    marginBottom: spacing.md,
+  },
+  statBox: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  statDivider: {
+    width: 1,
+    backgroundColor: colors.border,
+  },
+  statLabel: {
+    fontSize: 10,
+    color: colors.textMuted,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+  },
+  statValue: {
+    fontSize: fontSizes.lg,
+    fontWeight: '800',
+    color: colors.textPrimary,
+    marginTop: 2,
+  },
+  redSosButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1.5,
+    borderColor: colors.danger,
+    backgroundColor: '#FEE2E2',
+    paddingVertical: 10,
+    borderRadius: borderRadius.full,
+    gap: spacing.xs,
+    marginTop: spacing.md,
+  },
+  redSosText: {
+    fontSize: fontSizes.md,
+    fontWeight: '800',
+    color: colors.danger,
+  },
+
+  // RIDE COMPLETED STYLES
+  completedScrollContent: {
+    padding: spacing.md,
+    paddingBottom: spacing.xl,
+  },
+  completedHeaderBanner: {
+    backgroundColor: colors.successDark,
+    borderRadius: borderRadius.lg,
+    paddingVertical: spacing.xl,
+    paddingHorizontal: spacing.lg,
+    alignItems: 'center',
+    marginBottom: spacing.md,
+  },
+  completedCheckCircle: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.md,
+  },
+  completedTitle: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    marginBottom: 4,
+  },
+  completedSub: {
+    fontSize: fontSizes.sm,
+    color: 'rgba(255, 255, 255, 0.9)',
+  },
+  completedFareCard: {
+    backgroundColor: colors.surface,
+    borderRadius: borderRadius.md,
+    padding: spacing.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    ...shadows.card,
+  },
+  fareRowCompleted: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  fareLabelCompleted: {
+    fontSize: fontSizes.xs,
+    color: colors.textSecondary,
+  },
+  fareAmountCompleted: {
+    fontSize: 32,
+    fontWeight: '800',
+    color: colors.textPrimary,
+    marginTop: 2,
+  },
+  paymentCompletedRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  paymentLeftCompleted: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  paymentMethodCompleted: {
+    fontSize: fontSizes.sm,
+    fontWeight: '600',
+    color: colors.textPrimary,
+  },
+  paidChip: {
+    backgroundColor: '#DCFCE7',
+    paddingHorizontal: 12,
+    paddingVertical: 3,
+    borderRadius: borderRadius.full,
+  },
+  paidChipText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#15803D',
+  },
+  driverCompletedRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  driverAvatarSmallBlue: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     backgroundColor: colors.primaryLight,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: spacing.sm,
   },
-  driverMeta: {
+  driverCompletedMeta: {
     flex: 1,
   },
-  driverName: {
-    fontSize: fontSizes.md,
-    fontWeight: '700',
-    color: colors.textPrimary,
-  },
-  driverVehicle: {
-    fontSize: fontSizes.xs,
-    color: colors.textSecondary,
-    marginTop: 1,
-  },
-  driverActions: {
-    flexDirection: 'row',
-    gap: spacing.xs,
-  },
-  driverActionBtn: {
-    width: dimensions.minTouchTarget,
-    height: dimensions.minTouchTarget,
-    borderRadius: borderRadius.full,
-    backgroundColor: colors.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  locationSummaryRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-  },
-  pickupDotSmall: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: colors.pickupMarker,
-  },
-  dropSquareSmall: {
-    width: 8,
-    height: 8,
-    borderRadius: 1,
-    backgroundColor: colors.dropMarker,
-  },
-  locationSummaryText: {
-    fontSize: fontSizes.xs,
-    color: colors.textPrimary,
-    fontWeight: '600',
-    flex: 1,
-  },
-  locationDivider: {
-    height: 1,
-    backgroundColor: colors.border,
-    marginVertical: spacing.xs,
-  },
-  paymentActionsBox: {
-    width: '100%',
-    backgroundColor: colors.primaryLight,
-    borderRadius: borderRadius.md,
-    padding: spacing.md,
-    marginBottom: spacing.md,
-  },
-  paymentActionTitle: {
+  driverCompletedName: {
     fontSize: fontSizes.sm,
     fontWeight: '700',
-    color: colors.primaryDark,
-    textAlign: 'center',
-    marginBottom: spacing.sm,
-  },
-  cashInstructions: {
-    alignItems: 'center',
-  },
-  cashText: {
-    fontSize: fontSizes.xs,
     color: colors.textPrimary,
-    textAlign: 'center',
+  },
+  driverCompletedRating: {
+    fontSize: 11,
+    color: colors.textSecondary,
+  },
+  ratingSection: {
+    alignItems: 'center',
+    marginVertical: spacing.sm,
+  },
+  howWasRideText: {
+    fontSize: fontSizes.sm + 1,
+    fontWeight: '700',
+    color: colors.textPrimary,
     marginBottom: spacing.sm,
   },
-  switchMethodBtn: {
-    width: '100%',
+  starsRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
   },
-  upiActions: {
-    gap: spacing.xs,
-  },
-  upiPayBtn: {
-    width: '100%',
-  },
-  actionBtnMargin: {
-    width: '100%',
-    marginTop: spacing.xs,
-  },
-  devSimulationPanel: {
-    width: '100%',
+  submitRatingBtn: {
     marginTop: spacing.md,
-    paddingTop: spacing.sm,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-    alignItems: 'center',
+    backgroundColor: colors.primary,
   },
-  devSimTitle: {
-    fontSize: fontSizes.xs,
-    color: colors.textMuted,
-    fontWeight: '600',
-    marginBottom: spacing.xs,
-  },
-  simButtonsRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'center',
-    gap: 6,
-  },
-  simPill: {
-    backgroundColor: colors.border,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    borderRadius: borderRadius.full,
-    minHeight: 32,
-    justifyContent: 'center',
-  },
-  simPillText: {
-    fontSize: fontSizes.xs,
-    color: colors.textPrimary,
-    fontWeight: '600',
-  },
-  noDriverContainer: {
-    width: '100%',
-  },
-  freshnessNotice: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: colors.warningLight,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-    borderRadius: borderRadius.sm,
-    marginBottom: spacing.sm,
-  },
-  freshnessNoticeText: {
-    fontSize: fontSizes.xs,
-    color: '#B45309',
-    fontWeight: '600',
+  bookAnotherBtn: {
+    marginTop: spacing.sm,
   },
 });

@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, StyleProp, ViewStyle, TextStyle } from 'react-native';
-import { colors, spacing, fontSizes, borderRadius } from '../app/theme';
+import { colors, spacing, fontSizes, borderRadius } from '../theme';
 
 export interface StatusChipProps {
   status: string;

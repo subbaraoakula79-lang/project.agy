@@ -1,3 +1,5 @@
+// apps/rider-mobile/services/notification.service.ts
+
 /**
  * Rider Mobile Notification Service
  * Provider-independent push token registration, notification permission handling,
@@ -158,7 +160,6 @@ export class RiderNotificationService {
     activeSocketRideId?: string
   ): boolean {
     if (!notificationRideId || !activeSocketRideId) return false;
-    // If user is actively viewing the exact ride room in realtime, suppress banner duplicate
     return notificationRideId === activeSocketRideId;
   }
 

@@ -1,310 +1,168 @@
-import { useState } from 'react';
+// apps/rider-mobile/app/history.tsx
+import { useState, useEffect } from 'react';
 import {
   FlatList,
-  Modal,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
   SafeAreaView,
+  Image,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, spacing, fontSizes, borderRadius, shadows } from './theme';
+import { colors, spacing, fontSizes, borderRadius, shadows } from '../theme';
+import { useAuth } from '../context/AuthContext';
 import { AppHeader } from '../components/AppHeader';
-import { RideCard } from '../components/RideCard';
-import { EmptyState } from '../components/EmptyState';
-import { PrimaryButton } from '../components/PrimaryButton';
-import { SecondaryButton } from '../components/SecondaryButton';
 import { BottomTabBar } from '../components/BottomTabBar';
-
-interface Rating {
-  id: string;
-  rating: number;
-  comment?: string | null;
-  raterUserId: string;
-}
 
 interface RideHistoryItem {
   id: string;
-  status: string;
-  requestedAt: string;
-  completedAt?: string | null;
-  cancelledAt?: string | null;
-  cancellationReason?: string | null;
-  estimatedFare: number;
-  actualFare?: number | null;
-  paymentMethod: string;
-  location?: {
-    pickupAddress: string;
-    dropAddress: string;
-  } | null;
-  vehicle?: {
-    make?: string | null;
-    model?: string | null;
-    registrationNumber: string;
-    vehicleType?: { displayName: string };
-  } | null;
-  driver?: {
-    firstName?: string | null;
-    lastName?: string | null;
-    averageRating?: number;
-  } | null;
-  myRating?: Rating | null;
+  status: 'COMPLETED' | 'CANCELLED';
+  pickup: string;
+  drop: string;
+  dateTime: string;
+  fare: number;
+  vehicleType: 'Bike' | 'Auto' | 'Cab';
 }
+
+const SAMPLE_RIDES: RideHistoryItem[] = [
+  {
+    id: 'ride-01',
+    status: 'COMPLETED',
+    pickup: 'Kakinada Railway Station',
+    drop: 'Rama Rao Peta',
+    dateTime: '12 Sep 2026, 09:12 AM',
+    fare: 48,
+    vehicleType: 'Bike',
+  },
+  {
+    id: 'ride-02',
+    status: 'COMPLETED',
+    pickup: 'Rama Rao Peta',
+    drop: 'Beach Road',
+    dateTime: '10 Sep 2026, 06:45 PM',
+    fare: 82,
+    vehicleType: 'Auto',
+  },
+  {
+    id: 'ride-03',
+    status: 'COMPLETED',
+    pickup: 'Kakinada City',
+    drop: 'Samalkot',
+    dateTime: '8 Sep 2026, 11:20 AM',
+    fare: 125,
+    vehicleType: 'Cab',
+  },
+  {
+    id: 'ride-04',
+    status: 'COMPLETED',
+    pickup: 'Railway Station',
+    drop: 'Gandhi Nagar',
+    dateTime: '5 Sep 2026, 07:30 PM',
+    fare: 52,
+    vehicleType: 'Bike',
+  },
+];
 
 export default function RiderHistoryScreen() {
   const router = useRouter();
+  const { isAuthenticated } = useAuth();
 
-  const [rides, setRides] = useState<RideHistoryItem[]>([
-    {
-      id: 'ride-hist-101',
-      status: 'COMPLETED',
-      requestedAt: new Date(Date.now() - 3600000).toISOString(),
-      completedAt: new Date(Date.now() - 1800000).toISOString(),
-      estimatedFare: 108,
-      actualFare: 108,
-      paymentMethod: 'CASH',
-      location: {
-        pickupAddress: 'Kakinada Railway Station',
-        dropAddress: 'Jagannaickpur Main Road',
-      },
-      vehicle: {
-        make: 'Bajaj',
-        model: 'RE Compact',
-        registrationNumber: 'AP05CD5678',
-        vehicleType: { displayName: 'Auto Rickshaw' },
-      },
-      driver: {
-        firstName: 'Suresh',
-        lastName: 'Babu',
-        averageRating: 4.8,
-      },
-      myRating: null,
-    },
-    {
-      id: 'ride-hist-102',
-      status: 'CANCELLED_BY_RIDER',
-      requestedAt: new Date(Date.now() - 86400000).toISOString(),
-      cancelledAt: new Date(Date.now() - 86100000).toISOString(),
-      cancellationReason: 'Cancelled by rider',
-      estimatedFare: 76,
-      paymentMethod: 'UPI',
-      location: {
-        pickupAddress: 'Bhanugudi Junction',
-        dropAddress: 'Sarpavaram Junction',
-      },
-      vehicle: {
-        make: 'Honda',
-        model: 'Activa 6G',
-        registrationNumber: 'AP05AB1234',
-        vehicleType: { displayName: 'Bike' },
-      },
-      driver: {
-        firstName: 'Ramesh',
-        lastName: 'K',
-        averageRating: 4.9,
-      },
-      myRating: null,
-    },
-  ]);
+  const [activeFilter, setActiveFilter] = useState<'ALL' | 'COMPLETED' | 'CANCELLED'>('ALL');
 
-  const [filter, setFilter] = useState<'ALL' | 'COMPLETED' | 'CANCELLED'>('ALL');
-  const [selectedRide, setSelectedRide] = useState<RideHistoryItem | null>(null);
+  // Guard: if not authenticated, redirect to login
+  useEffect(() => {
+    if (!isAuthenticated) {
+      router.replace('/login');
+    }
+  }, [isAuthenticated, router]);
 
-  // Rating Form Modal State
-  const [ratingModalVisible, setRatingModalVisible] = useState(false);
-  const [selectedScore, setSelectedScore] = useState<number>(5);
-  const [comment, setComment] = useState('');
-  const [submittingRating, setSubmittingRating] = useState(false);
-  const [ratingError, setRatingError] = useState('');
+  if (!isAuthenticated) {
+    return null;
+  }
 
-  const filteredRides = rides.filter((r) => {
-    if (filter === 'COMPLETED') return r.status === 'COMPLETED' || r.status === 'RIDE_COMPLETED';
-    if (filter === 'CANCELLED') return r.status.startsWith('CANCELLED');
+  const filteredRides = SAMPLE_RIDES.filter((ride) => {
+    if (activeFilter === 'COMPLETED') return ride.status === 'COMPLETED';
+    if (activeFilter === 'CANCELLED') return ride.status === 'CANCELLED';
     return true;
   });
-
-  const handleOpenRating = (ride: RideHistoryItem) => {
-    setSelectedRide(ride);
-    setSelectedScore(5);
-    setComment('');
-    setRatingError('');
-    setRatingModalVisible(true);
-  };
-
-  const handleSubmitRating = () => {
-    if (!selectedRide) return;
-    setRatingError('');
-    setSubmittingRating(true);
-
-    // Simulate API rating post to /rides/:id/rating
-    setTimeout(() => {
-      const newRating: Rating = {
-        id: `rat-${Date.now()}`,
-        rating: selectedScore,
-        comment: comment.trim() || null,
-        raterUserId: 'rider-001',
-      };
-
-      setRides((prev) =>
-        prev.map((r) => (r.id === selectedRide.id ? { ...r, myRating: newRating } : r)),
-      );
-
-      setSubmittingRating(false);
-      setRatingModalVisible(false);
-    }, 600);
-  };
 
   return (
     <SafeAreaView style={styles.safeArea}>
       <AppHeader
         title="Ride History"
-        subtitle="Your trips in Kakinada, AP"
         showBack={true}
         onBack={() => router.replace('/')}
-        showNotification={false}
-        showProfile={true}
       />
 
-      <View style={styles.container}>
-        {/* Filter Pills */}
-        <View style={styles.filterRow} accessibilityRole="tablist">
-          {(['ALL', 'COMPLETED', 'CANCELLED'] as const).map((f) => {
-            const isActive = filter === f;
-            const label = f === 'ALL' ? 'All Rides' : f === 'COMPLETED' ? 'Completed' : 'Cancelled';
-            return (
-              <TouchableOpacity
-                key={f}
-                style={[styles.filterChip, isActive && styles.filterChipActive]}
-                onPress={() => setFilter(f)}
-                activeOpacity={0.7}
-                accessibilityRole="tab"
-                accessibilityLabel={`${label} filter`}
-                accessibilityState={{ selected: isActive }}
+      {/* Filter Chips matching Reference Screen 11 */}
+      <View style={styles.filterBar}>
+        {(['ALL', 'COMPLETED', 'CANCELLED'] as const).map((filter) => {
+          const isActive = activeFilter === filter;
+          const label =
+            filter === 'ALL' ? 'All' : filter === 'COMPLETED' ? 'Completed' : 'Cancelled';
+          return (
+            <TouchableOpacity
+              key={filter}
+              style={[styles.filterChip, isActive && styles.filterChipActive]}
+              onPress={() => setActiveFilter(filter)}
+              accessibilityRole="button"
+              accessibilityLabel={`Filter by ${label}`}
+              accessibilityState={{ selected: isActive }}
+            >
+              <Text
+                style={[styles.filterChipText, isActive && styles.filterChipTextActive]}
               >
-                <Text
-                  style={[
-                    styles.filterChipText,
-                    isActive && styles.filterChipTextActive,
-                  ]}
-                >
-                  {label}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-
-        {/* Rides List */}
-        <FlatList
-          data={filteredRides}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.listContent}
-          showsVerticalScrollIndicator={false}
-          ListEmptyComponent={
-            <EmptyState
-              iconName="receipt-outline"
-              title="No rides found"
-              description={`You have no ${filter !== 'ALL' ? filter.toLowerCase() : ''} rides recorded in Kakinada yet.`}
-              actionTitle="Book a Ride"
-              onActionPress={() => router.replace('/')}
-            />
-          }
-          renderItem={({ item }) => {
-            const formattedDate = new Date(item.requestedAt).toLocaleString('en-IN', {
-              dateStyle: 'medium',
-              timeStyle: 'short',
-            });
-
-            return (
-              <RideCard
-                id={item.id}
-                date={formattedDate}
-                pickup={item.location?.pickupAddress || 'Kakinada'}
-                destination={item.location?.dropAddress || 'Destination'}
-                vehicleType={item.vehicle?.vehicleType?.displayName || 'Auto'}
-                fare={item.actualFare || item.estimatedFare}
-                status={item.status}
-                driverName={
-                  item.driver
-                    ? `${item.driver.firstName || ''} ${item.driver.lastName || ''}`.trim()
-                    : undefined
-                }
-                driverRating={item.driver?.averageRating}
-                ratedStars={item.myRating?.rating}
-                onRatePress={() => handleOpenRating(item)}
-              />
-            );
-          }}
-        />
+                {label}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
       </View>
 
-      {/* Rating Submission Modal */}
-      <Modal visible={ratingModalVisible} transparent animationType="fade">
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalCard} accessibilityLabel="Rate your trip modal">
-            <View style={styles.modalIconCircle}>
-              <Ionicons name="star" size={28} color="#D97706" />
-            </View>
-            <Text style={styles.modalTitle}>Rate Your Trip</Text>
-            <Text style={styles.modalSub}>
-              How was your journey with {selectedRide?.driver?.firstName || 'Captain'}?
-            </Text>
-
-            {ratingError ? <Text style={styles.modalErrorText}>{ratingError}</Text> : null}
-
-            {/* Star Selector */}
-            <View style={styles.starRow}>
-              {[1, 2, 3, 4, 5].map((star) => (
-                <TouchableOpacity
-                  key={star}
-                  onPress={() => setSelectedScore(star)}
-                  style={styles.starTouch}
-                  accessibilityRole="button"
-                  accessibilityLabel={`${star} stars`}
-                >
-                  <Ionicons
-                    name={selectedScore >= star ? 'star' : 'star-outline'}
-                    size={36}
-                    color={selectedScore >= star ? '#F59E0B' : colors.textMuted}
-                  />
-                </TouchableOpacity>
-              ))}
+      {/* Ride Cards List */}
+      <FlatList
+        data={filteredRides}
+        keyExtractor={(item) => item.id}
+        contentContainerStyle={styles.listContent}
+        showsVerticalScrollIndicator={false}
+        renderItem={({ item }) => (
+          <View style={styles.rideCard}>
+            <View style={styles.cardHeader}>
+              <View style={styles.routeRow}>
+                <Ionicons name="location" size={16} color={colors.success} />
+                <Text style={styles.routeText} numberOfLines={1}>
+                  {item.pickup} → {item.drop}
+                </Text>
+              </View>
+              <View style={styles.statusBadge}>
+                <Text style={styles.statusText}>{item.status === 'COMPLETED' ? 'Completed' : 'Cancelled'}</Text>
+              </View>
             </View>
 
-            <Text style={styles.scoreLabel}>{selectedScore} of 5 Stars</Text>
-
-            <TextInput
-              style={styles.commentInput}
-              placeholder="Leave feedback for the captain (optional)..."
-              placeholderTextColor={colors.textMuted}
-              value={comment}
-              onChangeText={setComment}
-              multiline
-              maxLength={500}
-              accessibilityLabel="Optional review comments"
-            />
-
-            <View style={styles.modalBtnRow}>
-              <SecondaryButton
-                title="Cancel"
-                onPress={() => setRatingModalVisible(false)}
-                style={styles.modalBtn}
-              />
-              <PrimaryButton
-                title="Submit Rating"
-                onPress={handleSubmitRating}
-                loading={submittingRating}
-                style={styles.modalBtn}
-              />
+            <View style={styles.metaRow}>
+              <View style={styles.historyThumbBox}>
+                <Image
+                  source={
+                    item.vehicleType === 'Bike'
+                      ? require('../assets/images/vehicles/bike.png')
+                      : item.vehicleType === 'Cab'
+                      ? require('../assets/images/vehicles/cab.png')
+                      : require('../assets/images/vehicles/auto.png')
+                  }
+                  style={styles.historyVehicleThumb}
+                  resizeMode="contain"
+                />
+              </View>
+              <Text style={styles.metaText}>
+                ₹{item.fare} • {item.vehicleType} • {item.dateTime}
+              </Text>
             </View>
           </View>
-        </View>
-      </Modal>
+        )}
+      />
 
-      {/* Bottom Navigation */}
       <BottomTabBar activeTab="rides" />
     </SafeAreaView>
   );
@@ -315,118 +173,95 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
   },
-  container: {
-    flex: 1,
-    paddingHorizontal: spacing.md,
-    paddingTop: spacing.sm,
-  },
-  filterRow: {
+  filterBar: {
     flexDirection: 'row',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
     gap: spacing.sm,
-    marginBottom: spacing.md,
+    backgroundColor: colors.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
   },
   filterChip: {
-    flex: 1,
-    paddingVertical: spacing.sm,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
+    paddingVertical: 8,
+    paddingHorizontal: 20,
     borderRadius: borderRadius.full,
-    alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: '#F1F5F9',
   },
   filterChipActive: {
     backgroundColor: colors.primary,
-    borderColor: colors.primary,
   },
   filterChipText: {
-    fontSize: fontSizes.xs + 1,
+    fontSize: fontSizes.sm,
     fontWeight: '600',
     color: colors.textSecondary,
   },
   filterChipTextActive: {
-    color: colors.surface,
-    fontWeight: '700',
+    color: '#FFFFFF',
   },
   listContent: {
-    paddingBottom: spacing.lg,
+    padding: spacing.md,
+    gap: spacing.md,
   },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: colors.overlay,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: spacing.lg,
-  },
-  modalCard: {
-    width: '100%',
+  rideCard: {
     backgroundColor: colors.surface,
-    borderRadius: borderRadius.lg,
-    padding: spacing.xl,
-    alignItems: 'center',
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
     borderWidth: 1,
     borderColor: colors.border,
-    ...shadows.elevated,
+    ...shadows.card,
   },
-  modalIconCircle: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: colors.warningLight,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacing.sm,
-  },
-  modalTitle: {
-    fontSize: fontSizes.xl,
-    fontWeight: '700',
-    color: colors.textPrimary,
-    marginBottom: 4,
-  },
-  modalSub: {
-    fontSize: fontSizes.sm,
-    color: colors.textSecondary,
-    marginBottom: spacing.md,
-    textAlign: 'center',
-  },
-  starRow: {
+  cardHeader: {
     flexDirection: 'row',
-    gap: 8,
+    alignItems: 'center',
+    justifyContent: 'space-between',
     marginBottom: spacing.xs,
   },
-  starTouch: {
-    padding: 4,
-  },
-  scoreLabel: {
-    fontSize: fontSizes.sm,
-    fontWeight: '700',
-    color: '#D97706',
-    marginBottom: spacing.md,
-  },
-  commentInput: {
-    width: '100%',
-    backgroundColor: colors.background,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: borderRadius.sm,
-    padding: spacing.md,
-    fontSize: fontSizes.sm,
-    color: colors.textPrimary,
-    height: 80,
-    textAlignVertical: 'top',
-    marginBottom: spacing.md,
-  },
-  modalBtnRow: {
+  routeRow: {
     flexDirection: 'row',
-    gap: spacing.sm,
-    width: '100%',
+    alignItems: 'center',
+    flex: 1,
+    marginRight: spacing.sm,
+    gap: 6,
   },
-  modalBtn: {
+  routeText: {
+    fontSize: fontSizes.sm + 1,
+    fontWeight: '700',
+    color: colors.textPrimary,
     flex: 1,
   },
-  modalErrorText: {
-    color: colors.danger,
+  statusBadge: {
+    backgroundColor: '#DCFCE7',
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderRadius: borderRadius.full,
+  },
+  statusText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#15803D',
+  },
+  metaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingLeft: 22,
+    gap: 8,
+  },
+  historyThumbBox: {
+    width: 28,
+    height: 20,
+    borderRadius: 4,
+    backgroundColor: '#F8FAFC',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  historyVehicleThumb: {
+    width: '100%',
+    height: '100%',
+  },
+  metaText: {
     fontSize: fontSizes.xs,
-    marginBottom: spacing.sm,
+    color: colors.textSecondary,
+    fontWeight: '500',
   },
 });

@@ -10,7 +10,7 @@ import {
   TextStyle,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, spacing, fontSizes, shadows, borderRadius, dimensions } from '../app/theme';
+import { colors, spacing, fontSizes, shadows, borderRadius, dimensions } from '../theme';
 
 export interface PrimaryButtonProps {
   title: string;

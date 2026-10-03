@@ -1,24 +1,41 @@
-
+// apps/rider-mobile/app/profile.tsx
+import { useEffect } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
+  TouchableOpacity,
   Alert,
   SafeAreaView,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, spacing, fontSizes, borderRadius, shadows } from './theme';
+import { colors, spacing, fontSizes, borderRadius, shadows } from '../theme';
+import { useAuth } from '../context/AuthContext';
 import { AppHeader } from '../components/AppHeader';
-import { ProfileRow } from '../components/ProfileRow';
-import { SectionHeader } from '../components/SectionHeader';
 import { BottomTabBar } from '../components/BottomTabBar';
 
 export default function RiderProfileScreen() {
   const router = useRouter();
+  const { user, isAuthenticated, logout } = useAuth();
+
+  // Guard: if not authenticated, redirect to login
+  useEffect(() => {
+    if (!isAuthenticated) {
+      router.replace('/login');
+    }
+  }, [isAuthenticated, router]);
+
+  if (!isAuthenticated) {
+    return null;
+  }
 
   const handleAction = (feature: string) => {
+    if (feature === 'My Rides') {
+      router.push('/history');
+      return;
+    }
     Alert.alert(feature, `${feature} options will be available in the upcoming release.`);
   };
 
@@ -31,9 +48,12 @@ export default function RiderProfileScreen() {
         {
           text: 'Log Out',
           style: 'destructive',
-          onPress: () => router.replace('/'),
+          onPress: () => {
+            logout();
+            router.replace('/login');
+          },
         },
-      ],
+      ]
     );
   };
 
@@ -41,135 +61,140 @@ export default function RiderProfileScreen() {
     <SafeAreaView style={styles.safeArea}>
       <AppHeader
         title="Profile"
-        subtitle="Manage your YatraSeva account"
         showBack={true}
         onBack={() => router.replace('/')}
-        showNotification={false}
-        showProfile={false}
+        rightAction={
+          <TouchableOpacity
+            style={styles.gearButton}
+            onPress={() => handleAction('Settings')}
+            accessibilityLabel="Settings"
+            accessibilityRole="button"
+          >
+            <Ionicons name="settings-outline" size={22} color={colors.textPrimary} />
+          </TouchableOpacity>
+        }
       />
 
       <ScrollView
-        style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* User Card */}
-        <View style={styles.userCard}>
+        {/* User Profile Card matching Reference Screen 13 */}
+        <View style={styles.profileCard}>
           <View style={styles.avatarCircle}>
-            <Ionicons name="person" size={36} color={colors.surface} />
+            <Ionicons name="person" size={40} color={colors.primary} />
           </View>
-          <View style={styles.userInfo}>
-            <Text style={styles.userName}>Priya Sharma</Text>
-            <Text style={styles.userPhone}>+91 90000 00001</Text>
+          <View style={styles.profileMeta}>
+            <Text style={styles.profileName}>{user?.name || 'Priya Sharma'}</Text>
+            <Text style={styles.profilePhone}>{user?.phone || '+91 98765 43210'}</Text>
             <View style={styles.verifiedBadge}>
-              <Ionicons name="checkmark-circle" size={14} color={colors.success} />
-              <Text style={styles.verifiedText}>Verified Rider</Text>
+              <Ionicons name="checkmark-circle" size={14} color="#15803D" />
+              <Text style={styles.verifiedText}>Verified</Text>
             </View>
           </View>
         </View>
 
-        {/* SECTION 1: ACCOUNT */}
-        <SectionHeader title="ACCOUNT" style={styles.sectionHeader} />
-        <View style={styles.groupCard}>
-          <ProfileRow
-            iconName="receipt-outline"
-            title="My Rides"
-            subtitle="View past trips & invoices"
-            onPress={() => router.push('/history')}
-          />
-          <ProfileRow
-            iconName="wallet-outline"
-            title="My Wallet"
-            subtitle="YatraSeva cash & credits"
-            value="₹248"
+        {/* Menu Rows matching Reference Screen 13 */}
+        <View style={styles.menuContainer}>
+          <TouchableOpacity
+            style={styles.menuRow}
+            onPress={() => handleAction('My Rides')}
+            accessibilityRole="button"
+          >
+            <View style={styles.menuLeft}>
+              <Ionicons name="car-outline" size={20} color={colors.textPrimary} />
+              <Text style={styles.menuTitle}>My Rides</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.menuRow}
             onPress={() => handleAction('My Wallet')}
-          />
-          <ProfileRow
-            iconName="location-outline"
-            title="Saved Addresses"
-            subtitle="Home, Work, Beach Road"
+            accessibilityRole="button"
+          >
+            <View style={styles.menuLeft}>
+              <Ionicons name="wallet-outline" size={20} color={colors.textPrimary} />
+              <Text style={styles.menuTitle}>My Wallet</Text>
+            </View>
+            <View style={styles.menuRight}>
+              <Text style={styles.walletAmount}>₹{user?.walletBalance ?? 248}</Text>
+              <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+            </View>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.menuRow}
             onPress={() => handleAction('Saved Addresses')}
-          />
-          <ProfileRow
-            iconName="card-outline"
-            title="Payment Methods"
-            subtitle="UPI, Cards, Cash"
-            onPress={() => handleAction('Payment Methods')}
-          />
-        </View>
+            accessibilityRole="button"
+          >
+            <View style={styles.menuLeft}>
+              <Ionicons name="location-outline" size={20} color={colors.textPrimary} />
+              <Text style={styles.menuTitle}>Saved Addresses</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+          </TouchableOpacity>
 
-        {/* SECTION 2: PREFERENCES */}
-        <SectionHeader title="PREFERENCES" style={styles.sectionHeader} />
-        <View style={styles.groupCard}>
-          <ProfileRow
-            iconName="notifications-outline"
-            title="Notifications"
-            subtitle="Ride updates & promotional offers"
-            onPress={() => handleAction('Notifications')}
-          />
-          <ProfileRow
-            iconName="language-outline"
-            title="App Language"
-            value="English (Telugu available)"
-            onPress={() => handleAction('App Language')}
-          />
-          <ProfileRow
-            iconName="settings-outline"
-            title="App Preferences"
-            subtitle="Theme, sound alerts, accessibility"
-            onPress={() => handleAction('App Preferences')}
-          />
-        </View>
+          <TouchableOpacity
+            style={styles.menuRow}
+            onPress={() => handleAction('Help & Support')}
+            accessibilityRole="button"
+          >
+            <View style={styles.menuLeft}>
+              <Ionicons name="help-circle-outline" size={20} color={colors.textPrimary} />
+              <Text style={styles.menuTitle}>Help & Support</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+          </TouchableOpacity>
 
-        {/* SECTION 3: SAFETY */}
-        <SectionHeader title="SAFETY & SUPPORT" style={styles.sectionHeader} />
-        <View style={styles.groupCard}>
-          <ProfileRow
-            iconName="shield-checkmark-outline"
-            title="Emergency Contacts"
-            subtitle="Manage trusted contacts for SOS"
-            onPress={() => router.push('/safety')}
-          />
-          <ProfileRow
-            iconName="help-circle-outline"
-            title="Help & Support"
-            subtitle="24x7 customer assistance"
-            onPress={() => router.push('/safety')}
-          />
-          <ProfileRow
-            iconName="information-circle-outline"
-            title="About YatraSeva"
-            subtitle="Version 1.0.0 • Kakinada, AP"
+          <TouchableOpacity
+            style={styles.menuRow}
+            onPress={() => handleAction('Settings')}
+            accessibilityRole="button"
+          >
+            <View style={styles.menuLeft}>
+              <Ionicons name="settings-outline" size={20} color={colors.textPrimary} />
+              <Text style={styles.menuTitle}>Settings</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.menuRow, { borderBottomWidth: 0 }]}
             onPress={() => handleAction('About YatraSeva')}
-          />
+            accessibilityRole="button"
+          >
+            <View style={styles.menuLeft}>
+              <Ionicons name="information-circle-outline" size={20} color={colors.textPrimary} />
+              <Text style={styles.menuTitle}>About YatraSeva</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+          </TouchableOpacity>
         </View>
 
-        {/* Brand Banner Card */}
-        <View style={styles.bannerCard}>
-          <View style={styles.bannerIconCircle}>
-            <Ionicons name="shield-checkmark" size={24} color={colors.success} />
+        {/* Bottom Safety & Trust Card matching Reference Screen 13 */}
+        <View style={styles.trustCard}>
+          <View style={styles.trustIconCircle}>
+            <Ionicons name="shield-checkmark" size={24} color={colors.brandGreen} />
           </View>
-          <View style={styles.bannerTextCol}>
-            <Text style={styles.bannerTitle}>Safe Rides • Better Tomorrow</Text>
-            <Text style={styles.bannerSub}>Kakinada's premier community mobility platform</Text>
+          <View style={styles.trustTextColumn}>
+            <Text style={styles.trustTitle}>Safe Rides</Text>
+            <Text style={styles.trustSub}>Better Tomorrow</Text>
           </View>
         </View>
 
-        {/* SECTION 4: ACCOUNT ACTIONS */}
-        <SectionHeader title="ACCOUNT ACTIONS" style={styles.sectionHeader} />
-        <View style={styles.groupCard}>
-          <ProfileRow
-            iconName="log-out-outline"
-            title="Log Out"
-            subtitle="Sign out from this device"
-            isDestructive={true}
-            showChevron={false}
-            onPress={handleLogout}
-          />
-        </View>
+        {/* Log Out Option */}
+        <TouchableOpacity
+          style={styles.logoutButton}
+          onPress={handleLogout}
+          accessibilityRole="button"
+          accessibilityLabel="Log out of account"
+        >
+          <Ionicons name="log-out-outline" size={20} color={colors.danger} />
+          <Text style={styles.logoutText}>Log Out</Text>
+        </TouchableOpacity>
       </ScrollView>
 
-      {/* Global Bottom Navigation Bar */}
       <BottomTabBar activeTab="profile" />
     </SafeAreaView>
   );
@@ -180,43 +205,46 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
   },
-  scrollView: {
-    flex: 1,
+  gearButton: {
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   scrollContent: {
-    padding: spacing.md,
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.md,
     paddingBottom: spacing.xl,
   },
-  userCard: {
+  profileCard: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: colors.surface,
-    borderRadius: borderRadius.lg,
     padding: spacing.md,
-    marginBottom: spacing.md,
+    borderRadius: borderRadius.md,
     borderWidth: 1,
     borderColor: colors.border,
+    marginBottom: spacing.lg,
     ...shadows.card,
   },
   avatarCircle: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: colors.primary,
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: colors.primaryLight,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: spacing.md,
-    ...shadows.button,
   },
-  userInfo: {
+  profileMeta: {
     flex: 1,
   },
-  userName: {
+  profileName: {
     fontSize: fontSizes.lg,
     fontWeight: '700',
     color: colors.textPrimary,
   },
-  userPhone: {
+  profilePhone: {
     fontSize: fontSizes.sm,
     color: colors.textSecondary,
     marginTop: 2,
@@ -224,62 +252,102 @@ const styles = StyleSheet.create({
   verifiedBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    backgroundColor: colors.successLight,
-    paddingHorizontal: spacing.xs + 2,
-    paddingVertical: 2,
-    borderRadius: borderRadius.xs,
+    backgroundColor: '#DCFCE7',
     alignSelf: 'flex-start',
-    marginTop: spacing.xs,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: borderRadius.full,
+    marginTop: 6,
+    gap: 4,
   },
   verifiedText: {
-    fontSize: fontSizes.xs,
-    color: colors.success,
+    fontSize: 11,
     fontWeight: '700',
+    color: '#15803D',
   },
-  sectionHeader: {
-    marginTop: spacing.sm,
-    marginBottom: spacing.xs,
-  },
-  groupCard: {
+  menuContainer: {
     backgroundColor: colors.surface,
     borderRadius: borderRadius.md,
-    overflow: 'hidden',
     borderWidth: 1,
     borderColor: colors.border,
-    marginBottom: spacing.sm,
+    paddingHorizontal: spacing.md,
+    marginBottom: spacing.lg,
     ...shadows.card,
   },
-  bannerCard: {
+  menuRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.successLight,
+    justifyContent: 'space-between',
+    paddingVertical: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  menuLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  menuRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  menuTitle: {
+    fontSize: fontSizes.md,
+    color: colors.textPrimary,
+    fontWeight: '500',
+  },
+  walletAmount: {
+    fontSize: fontSizes.sm,
+    fontWeight: '700',
+    color: colors.textPrimary,
+  },
+  trustCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F0FDF4',
     borderRadius: borderRadius.md,
     padding: spacing.md,
-    marginVertical: spacing.md,
     borderWidth: 1,
-    borderColor: '#C6F6D5',
+    borderColor: '#BBF7D0',
+    marginBottom: spacing.lg,
+    gap: spacing.md,
   },
-  bannerIconCircle: {
+  trustIconCircle: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: colors.surface,
+    backgroundColor: '#DCFCE7',
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: spacing.sm,
   },
-  bannerTextCol: {
-    flex: 1,
+  trustTextColumn: {
+    justifyContent: 'center',
   },
-  bannerTitle: {
-    fontSize: fontSizes.sm,
+  trustTitle: {
+    fontSize: fontSizes.md,
     fontWeight: '700',
-    color: '#22543D',
+    color: '#166534',
   },
-  bannerSub: {
+  trustSub: {
     fontSize: fontSizes.xs,
-    color: '#276749',
-    marginTop: 2,
+    color: '#15803D',
+    fontWeight: '500',
+  },
+  logoutButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing.md,
+    backgroundColor: colors.surface,
+    borderRadius: borderRadius.md,
+    borderWidth: 1,
+    borderColor: '#FCA5A5',
+    gap: spacing.xs,
+  },
+  logoutText: {
+    fontSize: fontSizes.md,
+    fontWeight: '600',
+    color: colors.danger,
   },
 });

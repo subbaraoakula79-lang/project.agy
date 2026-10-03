@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, StyleSheet, TouchableOpacity, StyleProp, ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, spacing, borderRadius, shadows, dimensions } from '../app/theme';
+import { colors, spacing, borderRadius, shadows, dimensions } from '../theme';
 import { LocationField } from './LocationField';
 import { PrimaryButton } from './PrimaryButton';
 

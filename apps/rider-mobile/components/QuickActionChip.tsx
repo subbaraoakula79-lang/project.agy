@@ -8,7 +8,7 @@ import {
   TextStyle,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, spacing, fontSizes, borderRadius, dimensions } from '../app/theme';
+import { colors, spacing, fontSizes, borderRadius, dimensions } from '../theme';
 
 export interface QuickActionChipProps {
   label: string;

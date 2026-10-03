@@ -1,7 +1,7 @@
 import React from 'react';
 import { TouchableOpacity, StyleSheet, StyleProp, ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, spacing, borderRadius, dimensions } from '../app/theme';
+import { colors, spacing, borderRadius, dimensions } from '../theme';
 
 export interface IconButtonProps {
   name: React.ComponentProps<typeof Ionicons>['name'];

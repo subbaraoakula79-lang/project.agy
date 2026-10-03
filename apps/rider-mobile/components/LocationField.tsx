@@ -9,7 +9,7 @@ import {
   ViewStyle,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, spacing, fontSizes, borderRadius, dimensions } from '../app/theme';
+import { colors, spacing, fontSizes, borderRadius, dimensions } from '../theme';
 
 export interface LocationFieldProps {
   type: 'pickup' | 'drop';

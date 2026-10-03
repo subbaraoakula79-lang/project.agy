@@ -8,7 +8,7 @@ import {
   ViewStyle,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, spacing, fontSizes, dimensions } from '../app/theme';
+import { colors, spacing, fontSizes, dimensions } from '../theme';
 
 export interface ProfileRowProps {
   iconName: React.ComponentProps<typeof Ionicons>['name'];
